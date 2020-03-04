@@ -1,0 +1,31 @@
+{
+  "name": "node-red-contrib-azure-iot-device",
+  "description": "Node-red nodes to connect to the Azure IoT platform as a device.",
+  "version": "0.1.1",
+  "engines": {
+    "node": ">=0.10.0"
+  },
+  "dependencies": {
+    "azure-iot-device": "^1.12.2",
+    "azure-iot-device-amqp": "^1.11.2",
+    "azure-iot-device-mqtt": "^1.11.2",
+    "azure-iot-device-http": "^1.11.2"
+  },
+  "keywords": [
+    "node-red",
+    "Azure",
+    "Azure IoT",
+    "Azure Iot Hub",
+    "Azure IoT Central",
+    "Azure IoT Device Provisioning"
+  ],
+  "node-red": {
+    "nodes": {
+      "AzureIoTCentral": "azureiotdevice/azureiotdevice.js"
+    }
+  },
+  "author": {
+    "name": "Eric van Uum"
+  }
+}
+  

@@ -1,0 +1,121 @@
+<script type="text/javascript">
+    RED.nodes.registerType('azureiotdevice',{
+        category: 'Azure IoT',
+        color: '#00A4EF',
+        defaults: {
+            deviceid: {value:"", required:true},
+            connectiontype: {value: "", required:true},
+            authenticationmethod: {value: "", required:true},
+            iothub: {value: "", required: false},
+            scopeid: {value: "", required:false},
+            enrollmenttype: {value: "", required:false},
+            saskey: {value: "", required:false},
+            x509certificate: {value: "", required:false},
+            protocol: {value: "", required:true},
+            gatewayhostname: {value: "", required:false},
+            x509edgecertificate: {value: "", required:false}
+        },
+        inputs:1,
+        outputs:1,
+        icon: "azureiotdevice.png",
+        label: function() {
+            return "Azure IoT Device: " + this.deviceid;
+        },
+        paletteLabel: function(){
+            return "Azure IoT Device";
+        },
+        oneditprepare: function() {
+            $(".iothub-row").hide();
+            $(".dps-row").hide();
+            $(".sas-row").hide();
+            $(".x509-row").hide();
+
+            $("#node-input-connectiontype").change(function() {
+                if ($(this).val() === "constr") {
+                    $(".iothub-row").show();
+                    $(".dps-row").hide();
+                } else if ($(this).val() === "dps") {
+                    $(".iothub-row").hide();
+                    $(".dps-row").show();
+                }
+            });
+
+            $("#node-input-authenticationmethod").change(function() {
+                if ($(this).val() === "sas") {
+                    $(".sas-row").show();
+                    $(".x509-row").hide();
+                } else if ($(this).val() === "x509") {
+                    $(".sas-row").hide();
+                    $(".x509-row").show();
+                }
+            });
+        }
+    });
+</script>
+
+<script type="text/x-red" data-template-name="azureiotdevice">
+    <div class="form-row">
+        <label for="node-input-deviceid"><i class="icon-tag"></i> <span>Device ID</span></label>
+        <input type="text" id="node-input-deviceid" placeholder="%deviceId%">
+    </div>
+    <div class="form-row">
+        <label for="node-input-connectiontype"><i class="icon-tag"></i> <span>Connection Type</span></label>
+        <select id="node-input-connectiontype">
+            <option value="constr">Connection string</option>
+            <option value="dps">Device provisioning service</option>
+        </select>
+    </div>
+    <div class="form-row">
+        <label for="node-input-authenticationmethod"><i class="icon-tag"></i> <span>Authentication Method</span></label>
+        <select id="node-input-authenticationmethod">
+            <option value="sas">Shared access signature (SAS)</option>
+            <option value="x509">Certificates (X.509)</option>
+        </select>
+    </div>
+    <div class="form-row iothub-row">
+        <label for="node-input-iothub"><i class="icon-tag"></i> <span>IoT Hub Hostname</span></label>
+        <input type="text" id="node-input-iothub" placeholder="%iothubname%.azure-devices.net">
+    </div>
+    <div class="form-row dps-row">
+        <label for="node-input-scopeid"><i class="icon-tag"></i> <span>Scope ID</span></label>
+        <input type="text" id="node-input-scopeid" placeholder="%scopeId%">
+    </div>
+    <div class="form-row dps-row">
+        <label for="node-input-enrollmenttype"><i class="icon-tag"></i> <span>Enrollment type</span></label>
+        <select id="node-input-enrollmenttype">
+            <option value="group">Group</option>
+            <option value="device">Individual</option>
+        </select>
+    </div>
+    <div class="form-row sas-row">
+        <label for="node-input-saskey"><i class="icon-tag"></i> <span>SAS Key</span></label>
+        <input type="text" id="node-input-saskey" placeholder="%primairy or secundairy key%">
+    </div>
+    <div class="form-row x509-row">
+        <label for="node-input-x509certificate"><i class="icon-tag"></i> <span>X.509 Certificate</span></label>
+        <input type="text" id="node-input-x509certificate" placeholder="%X509 certificate text%"/>
+    </div>
+    <div class="form-row">
+        <label for="node-input-protocol"><i class="icon-tag"></i> <span>Protocol</span></label>
+        <select id="node-input-protocol">
+            <option value="AMQP">AMQP</option>
+            <option value="AMQP_WS">AMQP_WS</option>
+            <option value="MQTT">MQTT</option>
+            <option value="MQTT_WS">MQTT_WS</option>
+        </select>
+    </div>
+    <hr/>
+    <div class="form-row">
+        <label for="node-input-gatewayhostname"><i class="icon-tag"></i> <span>IoT Edge Gateway Hostname</span></label>
+        <input type="text" id="node-input-gatewayhostname" placeholder="%GatewayHostName%">
+    </div>
+    <div class="form-row">
+        <label for="node-input-x509edgecertificate"><i class="icon-tag"></i> <span>IoT Edge X.509 Certificate</span></label>
+        <input type="text" id="node-input-x509edgecertificate" placeholder="%X509 certificate text%">
+    </div>
+</script>
+
+<script type="text/x-red" data-help-name="azureiotdevice">
+    <p>The Azure IoT Device node enables you to send telemetry and properties to, and receive settings and commands from the Azure IoT platform using Node-Red.The payload requires to have a certain structure.</p>
+    <p>THe use of this node is documented on the github page: </p>
+</script>
