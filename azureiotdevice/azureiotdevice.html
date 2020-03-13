@@ -1,4 +1,37 @@
 <script type="text/javascript">
+    RED.nodes.registerType('iotedgegateway',{
+        category: 'config',
+        color: '#a6bbcf',
+        defaults: {
+            hostname: {value:"", required: true},
+            certificate: {value:"", required: true}
+        },
+        label: function() {
+            return "IoT Edge Gateway";
+        }
+    });
+</script>
+
+<script type="text/x-red" data-template-name="iotedgegateway">
+    <div class="form-row">
+        <label for="node-input-hostname"><i class="icon-tag"></i> <span>Gateway Hostname</span></label>
+        <input type="text" id="node-input-hostname" placeholder="%hostname%">
+    </div>
+    <div class="form-row">
+        <label for="node-input-certificate"><i class="icon-tag"></i> <span>IoT Edge CA Certificate</span></label>
+        <input type="text" id="node-input-certificate" placeholder="%CA Certificate%">
+    </div>
+</script>
+
+<script type="text/x-red" data-template-name="iotedgegateway">
+    <p>Azure IoT Edge Gateway node enables the Azure IoT Device node to connect to a transparant gateway.</p>
+</script>
+
+<script type="text/x-red" data-help-name="iotedgegateway">
+    <p>Azure IoT Edge Gateway node enables the Azure IoT Device node to connect to a transparant gateway. How to create an IoT Edge as a transparant gateway can be found here: https://docs.microsoft.com/en-us/azure/iot-edge/how-to-create-transparent-gateway</p>
+</script>
+
+<script type="text/javascript">
     RED.nodes.registerType('azureiotdevice',{
         category: 'Azure IoT',
         color: '#00A4EF',
@@ -7,13 +40,15 @@
             connectiontype: {value: "", required:true},
             authenticationmethod: {value: "", required:true},
             iothub: {value: "", required: false},
+            isIotcentral: {value: false, required:false},
             scopeid: {value: "", required:false},
             enrollmenttype: {value: "", required:false},
             saskey: {value: "", required:false},
             x509certificate: {value: "", required:false},
+            x509key: {value: "", required:false},
             protocol: {value: "", required:true},
-            gatewayhostname: {value: "", required:false},
-            x509edgecertificate: {value: "", required:false}
+            methods: { value: [] },
+            gateway: { value:"", required:false, type:"iotedgegateway" }
         },
         inputs:1,
         outputs:1,
@@ -25,6 +60,35 @@
             return "Azure IoT Device";
         },
         oneditprepare: function() {
+            let node = this;
+            let cacheItemCount = 0;
+            // Enable tabbed interaction
+            let tabs = RED.tabs.create({
+            id: "node-input-device-tabs",
+                onchange: function(tab) {
+                $("#node-input-device-tabs-content")
+                    .children()
+                    .hide();
+                $("#" + tab.id).show();
+                }
+            });
+
+            tabs.addTab({
+                id: "compact-device-tab-identity",
+                label: this._("Device Identity")
+            });
+
+            tabs.addTab({
+                id: "compact-device-tab-methods",
+                label: this._("Direct Methods")
+            });
+
+            tabs.addTab({
+                id: "compact-device-tab-iotedge",
+                label: this._("IoT Edge Gateway")
+            });
+
+            // Start settings field defaults
             $(".iothub-row").hide();
             $(".dps-row").hide();
             $(".sas-row").hide();
@@ -49,73 +113,231 @@
                     $(".x509-row").show();
                 }
             });
+
+            // Direct methods
+            if (node.methods && node.methods.length > 0) {
+                cacheItemCount = node.methods.length;
+                node.methods.forEach(function(element, index, array) {
+                    generateMethodEntry(element, index);
+                });
+            }
+
+            function generateMethodEntry(method, id) {
+                let container = $("<li/>", {
+                style:
+                    "background: #fefefe; margin:0; padding:8px 0px; border-bottom: 1px solid #ccc;"
+                });
+                let row = $('<div id="row' + id + '"/>').appendTo(container);
+
+                $(
+                    '<i style="color: #eee; cursor: move;" class="node-input-device-methods-handle fa fa-bars"></i>'
+                ).appendTo(row);
+
+                let nameField = $("<input/>", {
+                    id: "node-input-device-methods-name" + id,
+                    class: "deviceMethodName",
+                    type: "text",
+                    style: "margin-left:5px;",
+                    placeholder: "name"
+                }).appendTo(row);
+
+                nameField.val(method.name);
+
+                let finalspan = $("<span/>", {
+                    style: "float: right;margin-right: 10px;"
+                }).appendTo(row);
+
+                let removeMethodButton = $("<a/>", {
+                href: "#",
+                    id: "node-button-method-remove" + id,
+                    class: "editor-button editor-button-small",
+                    style: "margin-top: 7px; margin-left: 5px;"
+                }).appendTo(finalspan);
+
+                $("<i/>", { class: "fa fa-remove" }).appendTo(removeMethodButton);
+
+                removeMethodButton.click(function() {
+                    container.css({ background: "#fee" });
+                    container.fadeOut(300, function() {
+                        $(this).remove();
+                    });
+                });
+
+                $("#node-input-device-methods-container").append(container);
+            };
+
+            $("#node-input-device-methods-container").sortable({
+                axis: "y",
+                handle: ".node-input-device-methods-handle",
+                cursor: "move"
+            });
+
+            $(
+                "#node-input-device-methods-container .node-input-device-methods-handle"
+            ).disableSelection();
+
+
+            $("#node-input-device-methods-add").click(function() {
+                if (!cacheItemCount || cacheItemCount < 0) {
+                    cacheItemCount = 0;
+                }
+                generateMethodEntry({ name: "" }, cacheItemCount++); // length is every time one more than index
+                $("#node-input-device-methods-container-div").scrollTop(
+                    $("#node-input-device-methods-container-div").get(0).scrollHeight
+                );
+            });
+
+
+            function switchDialogResize() {
+                switchUserDialogResize();
+            }
+
+            // dialog User handling
+            function switchUserDialogResize() {
+                let rows = $(
+                    "#dialog-form>div:not(.node-input-device-methods-container-row)"
+                );
+                let height = $("#dialog-form").height();
+
+                rows.each(function(index, row) {
+                    height -= row.outerHeight(true);
+                });
+
+                let editorRow = $(
+                    "#dialog-form>div.node-input-device-methods-container-row"
+                );
+                height -=
+                parseInt(editorRow.css("marginTop")) +
+                    parseInt(editorRow.css("marginBottom"));
+                $("#node-input-device-methods-container-div").css(
+                    "height",
+                    height + "px"
+                );
+            }
+
+            $("#dialog").on("dialogresize", switchDialogResize);
+
+            $("#dialog").on("dialogopen", function(ev) {
+                let size = $("#dialog").dialog("option", "sizeCache-switch");
+                if (size) {
+                    $("#dialog").dialog("option", "width", size.width);
+                    $("#dialog").dialog("option", "height", size.height);
+                    switchDialogResize();
+                } else {
+                    setTimeout(switchDialogResize, 10);
+                }
+            });
+
+            $("#dialog").on("dialogclose", function(ev, ui) {
+                $("#dialog").off("dialogresize", switchDialogResize);
+            });
+        },
+        oneditsave: function() {
+            let node = this;
+
+            let cacheMethods = $("#node-input-device-methods-container").children();
+            node.methods = [];
+            cacheMethods.each(function() {
+                node.methods.push({
+                name: $(this)
+                    .find(".deviceMethodName")
+                    .val()
+                });
+            });
         }
     });
 </script>
 
 <script type="text/x-red" data-template-name="azureiotdevice">
     <div class="form-row">
-        <label for="node-input-deviceid"><i class="icon-tag"></i> <span>Device ID</span></label>
-        <input type="text" id="node-input-deviceid" placeholder="%deviceId%">
+        <ul style="background: #fff; min-width: 600px; margin-bottom: 20px;" id="node-input-device-tabs"></ul>
     </div>
-    <div class="form-row">
-        <label for="node-input-connectiontype"><i class="icon-tag"></i> <span>Connection Type</span></label>
-        <select id="node-input-connectiontype">
-            <option value="constr">Connection string</option>
-            <option value="dps">Device provisioning service</option>
-        </select>
-    </div>
-    <div class="form-row">
-        <label for="node-input-authenticationmethod"><i class="icon-tag"></i> <span>Authentication Method</span></label>
-        <select id="node-input-authenticationmethod">
-            <option value="sas">Shared access signature (SAS)</option>
-            <option value="x509">Certificates (X.509)</option>
-        </select>
-    </div>
-    <div class="form-row iothub-row">
-        <label for="node-input-iothub"><i class="icon-tag"></i> <span>IoT Hub Hostname</span></label>
-        <input type="text" id="node-input-iothub" placeholder="%iothubname%.azure-devices.net">
-    </div>
-    <div class="form-row dps-row">
-        <label for="node-input-scopeid"><i class="icon-tag"></i> <span>Scope ID</span></label>
-        <input type="text" id="node-input-scopeid" placeholder="%scopeId%">
-    </div>
-    <div class="form-row dps-row">
-        <label for="node-input-enrollmenttype"><i class="icon-tag"></i> <span>Enrollment type</span></label>
-        <select id="node-input-enrollmenttype">
-            <option value="group">Group</option>
-            <option value="device">Individual</option>
-        </select>
-    </div>
-    <div class="form-row sas-row">
-        <label for="node-input-saskey"><i class="icon-tag"></i> <span>SAS Key</span></label>
-        <input type="text" id="node-input-saskey" placeholder="%primairy or secundairy key%">
-    </div>
-    <div class="form-row x509-row">
-        <label for="node-input-x509certificate"><i class="icon-tag"></i> <span>X.509 Certificate</span></label>
-        <input type="text" id="node-input-x509certificate" placeholder="%X509 certificate text%"/>
-    </div>
-    <div class="form-row">
-        <label for="node-input-protocol"><i class="icon-tag"></i> <span>Protocol</span></label>
-        <select id="node-input-protocol">
-            <option value="AMQP">AMQP</option>
-            <option value="AMQP_WS">AMQP_WS</option>
-            <option value="MQTT">MQTT</option>
-            <option value="MQTT_WS">MQTT_WS</option>
-        </select>
-    </div>
-    <hr/>
-    <div class="form-row">
-        <label for="node-input-gatewayhostname"><i class="icon-tag"></i> <span>IoT Edge Gateway Hostname</span></label>
-        <input type="text" id="node-input-gatewayhostname" placeholder="%GatewayHostName%">
-    </div>
-    <div class="form-row">
-        <label for="node-input-x509edgecertificate"><i class="icon-tag"></i> <span>IoT Edge X.509 Certificate</span></label>
-        <input type="text" id="node-input-x509edgecertificate" placeholder="%X509 certificate text%">
+    <div id="node-input-device-tabs-content" style="min-height: 170px;">
+        <div id="compact-device-tab-identity" style="display:none">
+            <div class="form-row">
+                <label for="node-input-deviceid"><i class="icon-tag"></i> <span>Device ID</span></label>
+                <input type="text" id="node-input-deviceid" placeholder="%deviceId%">
+            </div>
+            <div class="form-row">
+                <label for="node-input-connectiontype"><i class="icon-tag"></i> <span>Connection Type</span></label>
+                <select id="node-input-connectiontype">
+                    <option value="constr">Connection string</option>
+                    <option value="dps">Device provisioning service</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label for="node-input-authenticationmethod"><i class="icon-tag"></i> <span>Authentication Method</span></label>
+                <select id="node-input-authenticationmethod">
+                    <option value="sas">Shared access signature (SAS)</option>
+                    <option value="x509">Certificates (X.509)</option>
+                </select>
+            </div>
+            <div class="form-row iothub-row">
+                <label for="node-input-iothub"><i class="icon-tag"></i> <span>IoT Hub Hostname</span></label>
+                <input type="text" id="node-input-iothub" placeholder="%iothubname%.azure-devices.net">
+            </div>
+            <div class="form-row dps-row">
+                <label for="node-input-isIotcentral"><i class="icon-tag"></i> <span>IoT Central Device</span></label>
+                <input type="checkbox" id="node-input-isIotcentral" style="max-width:30px">
+            </div>
+            <div class="form-row dps-row">
+                <label for="node-input-scopeid"><i class="icon-tag"></i> <span>Scope ID</span></label>
+                <input type="text" id="node-input-scopeid" placeholder="%scopeId%">
+            </div>
+            <div class="form-row dps-row">
+                <label for="node-input-enrollmenttype"><i class="icon-tag"></i> <span>Enrollment type</span></label>
+                <select id="node-input-enrollmenttype">
+                    <option value="group">Group</option>
+                    <option value="device">Individual</option>
+                </select>
+            </div>
+            <div class="form-row sas-row">
+                <label for="node-input-saskey"><i class="icon-tag"></i> <span>SAS Key</span></label>
+                <input type="password" id="node-input-saskey" placeholder="%primairy or secundairy key%">
+            </div>
+            <div class="form-row x509-row">
+                <label for="node-input-x509certificate"><i class="icon-tag"></i> <span>X.509 Certificate</span></label>
+                <input type="password" id="node-input-x509certificate" placeholder="%X509 certificate text%"/>
+            </div>
+            <div class="form-row x509-row">
+                <label for="node-input-x509key"><i class="icon-tag"></i> <span>X.509 Key</span></label>
+                <input type="password" id="node-input-x509key" placeholder="%X509 key text%"/>
+            </div>
+            <div class="form-row">
+                <label for="node-input-protocol"><i class="icon-tag"></i> <span>Protocol</span></label>
+                <select id="node-input-protocol">
+                    <option value="amqp">AMQP</option>
+                    <option value="amqpWs">AMQP_WS</option>
+                    <option value="mqtt">MQTT</option>
+                    <option value="mqttWs">MQTT_WS</option>
+                </select>
+            </div>
+        </div>
+        <div id="compact-device-tab-methods" style="display:none">
+            <h4><span data-i18n="opcua-compact-contrib.label.users"></span></h4>
+            <div class="form-row node-input-device-methods-container-row" style="margin-bottom: 0px;">
+                <div id="node-input-device-methods-container-div"
+                    style="box-sizing: border-box; border-radius: 5px;
+                    height: 210px; padding: 5px; border: 1px solid #ccc; overflow-y:scroll;">
+                    <ol id="node-input-device-methods-container" style="list-style-type:none; margin: 0;"></ol>
+                </div>
+            </div>
+            <div class="form-row">
+                <a href="#" class="editor-button editor-button-small" id="node-input-device-methods-add"
+                    style="margin-top: 4px;"><i class="fa fa-plus"></i>
+                <span data-i18n="opcua-compact-contrib.label.addButton"></span></a>
+            </div>
+        </div>
+        <div id="compact-device-tab-iotedge" style="display:none">
+            <div class="form-row">
+                <label for="node-input-gateway"><i class="icon-tag"></i> <span>IoT Edge Gateway</span></label>
+                <input type="text" id="node-input-gateway" placeholder="%IoT Edge Gateway%">
+            </div>
+        </div>
     </div>
 </script>
 
 <script type="text/x-red" data-help-name="azureiotdevice">
-    <p>The Azure IoT Device node enables you to send telemetry and properties to, and receive settings and commands from the Azure IoT platform using Node-Red.The payload requires to have a certain structure.</p>
-    <p>THe use of this node is documented on the github page: </p>
+    <p>The Azure IoT Device node enables you to send telemetry and properties to, and receive settings and commands from the Azure IoT platform using Node-Red. The payload requires to have a certain structure.</p>
+    <p>How to use this node is documented on the github page: .... </p>
 </script>
