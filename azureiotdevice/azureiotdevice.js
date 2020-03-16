@@ -1,6 +1,8 @@
 module.exports = function (RED) {
     'use strict'
 
+    var fs = require('fs');
+
     var Client = require('azure-iot-device').Client;
     var Message = require('azure-iot-device').Message;
 
@@ -58,7 +60,7 @@ module.exports = function (RED) {
         node.x509key = config.x509key;
         node.protocol = config.protocol;
         node.methods = config.methods;
-        node.isDownstream = config.isDownstream;
+        node.information = config. information;
         node.gateway = config.gateway;
 
         // Create the Node-RED node
@@ -100,8 +102,8 @@ module.exports = function (RED) {
             }
         } else if (node.authenticationmethod === "x509") {
             options = {
-                cert : node.x509certificate,
-                key : node.x509key
+                cert : fs.readFileSync(node.x509certificate).toString(),
+                key : fs.readFileSync(node.x509key).toString()
             };
         };
         
@@ -121,14 +123,14 @@ module.exports = function (RED) {
             // Set security client based on SAS or X.509
             var provisioningSecurityClient = 
                 (node.authenticationmethod == "sas") ? new SecurityClient.sas(node.deviceid, node.saskey) :
-                new X509Security(node.deviceid, node.x509certificate);
+                new SecurityClient.x509(node.deviceid, options);
 
             var provisioningClient = ProvisioningDeviceClient.create(GlobalProvisoningEndpoint, node.scopeid, new provisioningProtocol(), provisioningSecurityClient);
             // Register the device.
             node.log('Provision IoT Device using DPS: ' + node.deviceid);
             provisioningClient.register(function(err, result) {
                 if (err) {
-                    node.log("Error registering device: " + err);
+                    node.log("Error registering device: " + JSON.stringify(err));
                 } else {
                     node.log('Registration succeeded');
                     node.log('assigned hub=' + result.assignedHub);
@@ -146,15 +148,16 @@ module.exports = function (RED) {
         // Set the client connection string and options
         var connectionString = 'HostName=' + node.iothub + ';DeviceId=' + node.deviceid +
             ((node.authenticationmethod == 'sas') ? (';SharedAccessKey=' + node.saskey) : ';x509=true');
-        if (node.isDownstream) {
-            connectionString = connectionString + ';GatewayHostName=' + node.gatewayhostname;
-            options.ca = node.x509edgecertificate;
+        if (node.gateway) {
+            connectionString = connectionString + ';GatewayHostName=' + node.gateway.hostname;
+            options.ca = fs.readFileSync(node.gateway.certificate).toString();
         }
         // Define the client
+        node.log(node.deviceid + ' -> Connection string:' + connectionString);
         var client = Client.fromConnectionString(connectionString, deviceProtocol);
         client.setOptions(options);
         client.on('error', function (err) {
-            node.log('Device Client error:' + err);
+            node.log(node.deviceid + ' -> Device Client error:' + err);
         });
         client.open(function(err) {
             if (err) {
@@ -163,6 +166,8 @@ module.exports = function (RED) {
                 node.log(node.deviceid + ' -> Device client connected.');
                 setStatus(node, statusEnum.connected);
 
+                var deviceTwin;
+
                 // Get the device twin 
                 client.getTwin(function(err, twin) {
                     if (err) {
@@ -170,20 +175,32 @@ module.exports = function (RED) {
                     } else {
                         node.log(node.deviceid + ' -> Device twin created.');
                         node.log(node.deviceid + ' -> Twin contents:' + JSON.stringify(twin.properties));
-                        twin.on('properties.desired', function(val) {
-                            node.log(node.deviceid + ' -> desired properties received: ' + JSON.stringify(val));
+                        deviceTwin = twin;
+                        // Send the information properties
+                        if (node.information) {
+                            node.log(node.deviceid + ' -> Send device information.');
+                            var information = {};
+                            for (let property in node.information) {
+                                information[node.information[property].name] =  {value: node.information[property].value};
+                            };
+                            sendDeviceProperties(node, twin, information);
+                        }
+
+                        // Get the desired properties
+                        twin.on('properties.desired', function(payload) {
+                            node.log(node.deviceid + ' -> desired properties received: ' + JSON.stringify(payload));
                             var msg = {};
                             msg.topic = 'properties';
-                            msg.payload = val;
+                            msg.payload = payload;
                             // Report back received desired properties ** Only for IoT Central Devices **
                             if (node.isIotcentral) {
-                                for (let setting in val){
+                                for (let setting in payload){
                                     if (setting.indexOf('$') === -1) {
                                         var patch = {
                                             [setting]: {
-                                                value: val[setting],
+                                                value: payload[setting].value,
                                                 status: 'completed',
-                                                desiredVersion: val.$version,
+                                                desiredVersion: payload.$version,
                                                 message: 'Node-Red Azure IoT Device'
                                             }
                                         }
@@ -211,8 +228,8 @@ module.exports = function (RED) {
                     }
                     if (msg.topic === 'telemetry') {
                         sendDeviceTelemetry(node, client, msg.payload);
-                    } else if (msg.topic === 'properties') {
-                        sendDeviceProperties(node, twin, msg.payload);
+                    } else if (msg.topic === 'properties' && deviceTwin) {
+                        sendDeviceProperties(node, deviceTwin, msg.payload);
                     }
                 });
 
@@ -334,7 +351,9 @@ module.exports = function (RED) {
             x509certificate: {value: ""},
             protocol: {value: ""},
             methods: {value: []},
-            isDownstream: {value: false}
+            information: {value: []},
+            isDownstream: {value: false},
+            gateway: {value: null}
         }
     });
 }

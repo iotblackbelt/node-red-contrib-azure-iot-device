@@ -18,7 +18,7 @@
         <input type="text" id="node-input-hostname" placeholder="%hostname%">
     </div>
     <div class="form-row">
-        <label for="node-input-certificate"><i class="icon-tag"></i> <span>IoT Edge CA Certificate</span></label>
+        <label for="node-input-certificate"><i class="icon-tag"></i> <span>IoT Edge CA Certificate file</span></label>
         <input type="text" id="node-input-certificate" placeholder="%CA Certificate%">
     </div>
 </script>
@@ -47,8 +47,9 @@
             x509certificate: {value: "", required:false},
             x509key: {value: "", required:false},
             protocol: {value: "", required:true},
-            methods: { value: [] },
-            gateway: { value:"", required:false, type:"iotedgegateway" }
+            methods: {value: []},
+            information: {value: []},
+            gateway: { value: null, required:false, type:"iotedgegateway" }
         },
         inputs:1,
         outputs:1,
@@ -61,7 +62,7 @@
         },
         oneditprepare: function() {
             let node = this;
-            let cacheItemCount = 0;
+
             // Enable tabbed interaction
             let tabs = RED.tabs.create({
             id: "node-input-device-tabs",
@@ -81,6 +82,11 @@
             tabs.addTab({
                 id: "compact-device-tab-methods",
                 label: this._("Direct Methods")
+            });
+
+            tabs.addTab({
+                id: "compact-device-tab-information",
+                label: this._("Device Information")
             });
 
             tabs.addTab({
@@ -115,8 +121,9 @@
             });
 
             // Direct methods
+            let methodsItemCount = 0;
             if (node.methods && node.methods.length > 0) {
-                cacheItemCount = node.methods.length;
+                methodsItemCount = node.methods.length;
                 node.methods.forEach(function(element, index, array) {
                     generateMethodEntry(element, index);
                 });
@@ -137,7 +144,7 @@
                     id: "node-input-device-methods-name" + id,
                     class: "deviceMethodName",
                     type: "text",
-                    style: "margin-left:5px;",
+                    style: "margin-left:5px;width:75%;",
                     placeholder: "name"
                 }).appendTo(row);
 
@@ -178,22 +185,22 @@
 
 
             $("#node-input-device-methods-add").click(function() {
-                if (!cacheItemCount || cacheItemCount < 0) {
-                    cacheItemCount = 0;
+                if (!methodsItemCount || methodsItemCount < 0) {
+                    methodsItemCount = 0;
                 }
-                generateMethodEntry({ name: "" }, cacheItemCount++); // length is every time one more than index
+                generateMethodEntry({ name: "" }, methodsItemCount++); // length is every time one more than index
                 $("#node-input-device-methods-container-div").scrollTop(
                     $("#node-input-device-methods-container-div").get(0).scrollHeight
                 );
             });
 
-
             function switchDialogResize() {
-                switchUserDialogResize();
+                switchMethodsDialogResize();
+                switchInformationDialogResize();
             }
 
-            // dialog User handling
-            function switchUserDialogResize() {
+            // dialog direct Methods handling
+            function switchMethodsDialogResize() {
                 let rows = $(
                     "#dialog-form>div:not(.node-input-device-methods-container-row)"
                 );
@@ -210,6 +217,113 @@
                 parseInt(editorRow.css("marginTop")) +
                     parseInt(editorRow.css("marginBottom"));
                 $("#node-input-device-methods-container-div").css(
+                    "height",
+                    height + "px"
+                );
+            }
+
+            // Device Information
+            let informationItemCount = 0;
+            if (node.information && node.information.length > 0) {
+                informationItemCount = node.information.length;
+                node.information.forEach(function(element, index, array) {
+                    generateInformationEntry(element, index);
+                });
+            }
+
+            function generateInformationEntry(information, id) {
+                let container = $("<li/>", {
+                style:
+                    "background: #fefefe; margin:0; padding:8px 0px; border-bottom: 1px solid #ccc;"
+                });
+                let row = $('<div id="row' + id + '"/>').appendTo(container);
+
+                $(
+                    '<i style="color: #eee; cursor: move;" class="node-input-device-information-handle fa fa-bars"></i>'
+                ).appendTo(row);
+
+                let nameField = $("<input/>", {
+                    id: "node-input-device-information-name" + id,
+                    class: "deviceInformationName",
+                    type: "text",
+                    style: "margin-left:5px;width:35%;",
+                    placeholder: "name"
+                }).appendTo(row);
+
+                nameField.val(information.name);
+
+                let valueField = $("<input/>", {
+                    id: "node-input-device-information-value" + id,
+                    class: "deviceInformationValue",
+                    type: "text",
+                    style: "margin-left:5px;width:40%",
+                    placeholder: "value"
+                }).appendTo(row);
+
+                valueField.val(information.value);
+
+                let finalspan = $("<span/>", {
+                    style: "float: right;margin-right: 10px;"
+                }).appendTo(row);
+
+                let removeInformationButton = $("<a/>", {
+                href: "#",
+                    id: "node-button-information-remove" + id,
+                    class: "editor-button editor-button-small",
+                    style: "margin-top: 7px; margin-left: 5px;"
+                }).appendTo(finalspan);
+
+                $("<i/>", { class: "fa fa-remove" }).appendTo(removeInformationButton);
+
+                removeInformationButton.click(function() {
+                    container.css({ background: "#fee" });
+                    container.fadeOut(300, function() {
+                        $(this).remove();
+                    });
+                });
+
+                $("#node-input-device-information-container").append(container);
+            };
+
+            $("#node-input-device-information-container").sortable({
+                axis: "y",
+                handle: ".node-input-device-information-handle",
+                cursor: "move"
+            });
+
+            $(
+                "#node-input-device-information-container .node-input-device-information-handle"
+            ).disableSelection();
+
+
+            $("#node-input-device-information-add").click(function() {
+                if (!informationItemCount || informationItemCount < 0) {
+                    informationItemCount = 0;
+                }
+                generateInformationEntry({ name: "", value: "" }, informationItemCount++); // length is every time one more than index
+                $("#node-input-device-information-container-div").scrollTop(
+                    $("#node-input-device-information-container-div").get(0).scrollHeight
+                );
+            });
+
+            // dialog User handling
+            function switchInformationDialogResize() {
+                let rows = $(
+                    "#dialog-form>div:not(.node-input-device-information-container-row)"
+                );
+                let height = $("#dialog-form").height();
+
+                rows.each(function(index, row) {
+                    height -= row.outerHeight(true);
+                });
+
+                let editorRow = $(
+                    "#dialog-form>div.node-input-device-information-container-row"
+                );
+                height -=
+                parseInt(editorRow.css("marginTop")) +
+                    parseInt(editorRow.css("marginBottom"));
+                $("#node-input-device-information-container-div").css(
                     "height",
                     height + "px"
                 );
@@ -235,6 +349,7 @@
         oneditsave: function() {
             let node = this;
 
+            // Save the methods for this device
             let cacheMethods = $("#node-input-device-methods-container").children();
             node.methods = [];
             cacheMethods.each(function() {
@@ -242,6 +357,20 @@
                 name: $(this)
                     .find(".deviceMethodName")
                     .val()
+                });
+            });
+
+            // Save the information items for this device
+            let cacheInformation = $("#node-input-device-information-container").children();
+            node.information = [];
+            cacheInformation.each(function() {
+                node.information.push({
+                    name: $(this)
+                        .find(".deviceInformationName")
+                        .val(),
+                    value: $(this)
+                        .find(".deviceInformationValue")
+                        .val(),
                 });
             });
         }
@@ -296,12 +425,12 @@
                 <input type="password" id="node-input-saskey" placeholder="%primairy or secundairy key%">
             </div>
             <div class="form-row x509-row">
-                <label for="node-input-x509certificate"><i class="icon-tag"></i> <span>X.509 Certificate</span></label>
-                <input type="password" id="node-input-x509certificate" placeholder="%X509 certificate text%"/>
+                <label for="node-input-x509certificate"><i class="icon-tag"></i> <span>X.509 Certificate file</span></label>
+                <input type="text" id="node-input-x509certificate" placeholder="%X509 certificate text%"/>
             </div>
             <div class="form-row x509-row">
-                <label for="node-input-x509key"><i class="icon-tag"></i> <span>X.509 Key</span></label>
-                <input type="password" id="node-input-x509key" placeholder="%X509 key text%"/>
+                <label for="node-input-x509key"><i class="icon-tag"></i> <span>X.509 Key file</span></label>
+                <input type="text" id="node-input-x509key" placeholder="%X509 key text%"/>
             </div>
             <div class="form-row">
                 <label for="node-input-protocol"><i class="icon-tag"></i> <span>Protocol</span></label>
@@ -314,18 +443,31 @@
             </div>
         </div>
         <div id="compact-device-tab-methods" style="display:none">
-            <h4><span data-i18n="opcua-compact-contrib.label.users"></span></h4>
             <div class="form-row node-input-device-methods-container-row" style="margin-bottom: 0px;">
                 <div id="node-input-device-methods-container-div"
                     style="box-sizing: border-box; border-radius: 5px;
-                    height: 210px; padding: 5px; border: 1px solid #ccc; overflow-y:scroll;">
+                    height: 450px; padding: 5px; border: 1px solid #ccc; overflow-y:scroll;">
                     <ol id="node-input-device-methods-container" style="list-style-type:none; margin: 0;"></ol>
                 </div>
             </div>
             <div class="form-row">
                 <a href="#" class="editor-button editor-button-small" id="node-input-device-methods-add"
                     style="margin-top: 4px;"><i class="fa fa-plus"></i>
-                <span data-i18n="opcua-compact-contrib.label.addButton"></span></a>
+                <span data-i18n="methods-addButton"></span></a>
+            </div>
+        </div>
+        <div id="compact-device-tab-information" style="display:none">
+            <div class="form-row node-input-device-information-container-row" style="margin-bottom: 0px;">
+                <div id="node-input-device-information-container-div"
+                    style="box-sizing: border-box; border-radius: 5px;
+                    height: 450px; padding: 5px; border: 1px solid #ccc; overflow-y:scroll;">
+                    <ol id="node-input-device-information-container" style="list-style-type:none; margin: 0;"></ol>
+                </div>
+            </div>
+            <div class="form-row">
+                <a href="#" class="editor-button editor-button-small" id="node-input-device-information-add"
+                    style="margin-top: 4px;"><i class="fa fa-plus"></i>
+                <span data-i18n="information-addButton"></span></a>
             </div>
         </div>
         <div id="compact-device-tab-iotedge" style="display:none">
