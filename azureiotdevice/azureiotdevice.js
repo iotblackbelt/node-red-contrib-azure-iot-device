@@ -178,7 +178,7 @@ module.exports = function (RED) {
                         deviceTwin = twin;
                         // Send the information properties
                         if (node.information) {
-                            node.log(node.deviceid + ' -> Send device information.');
+                            node.log(node.deviceid + ' -> Sending device information.');
                             var information = {};
                             for (let property in node.information) {
                                 information[node.information[property].name] =  {value: node.information[property].value};
