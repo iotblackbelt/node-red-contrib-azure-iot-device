@@ -1,0 +1,23 @@
+FROM node:10
+
+WORKDIR /App
+
+RUN npm install -g --unsafe-perm node-red
+
+WORKDIR /usr/local/lib/node_modules/node-red/node_modules/node-red-contrib-azure-iot-device
+
+COPY ./azureiotdevice/azureiotdevice.js ./
+COPY ./azureiotdevice/azureiotdevice.html ./
+COPY ./azureiotdevice/icons/azureiotdevice.png ./icons/
+COPY ./azureiotdevice/examples/. ./examples/
+COPY ./azureiotdevice/package*.json ./
+
+RUN npm install --production
+
+WORKDIR /App
+
+EXPOSE 1880/tcp
+
+USER node
+
+CMD ["node-red"]
