@@ -10,7 +10,7 @@ COPY ./azureiotdevice/azureiotdevice.js ./
 COPY ./azureiotdevice/azureiotdevice.html ./
 COPY ./azureiotdevice/icons/azureiotdevice.png ./icons/
 COPY ./azureiotdevice/examples/. ./examples/
-COPY ./azureiotdevice/package*.json ./
+COPY ./package*.json ./
 
 RUN npm install --production
 
@@ -20,4 +20,4 @@ EXPOSE 1880/tcp
 
 USER node
 
-CMD ["node-red", "--flowFile", "flows.json"]
+CMD ["node-red", "--flowFile", "flows.json", "--userDir", "/node-red/"]

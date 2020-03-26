@@ -30,14 +30,29 @@
           }
         },
         "modules": {
-          "NoderedModule": {
+          "NoderedContainer": {
             "version": "1.0",
             "type": "docker",
             "status": "running",
             "restartPolicy": "always",
             "settings": {
-              "image": "localhost:5000/nodered-azureiotdevice:0.1.0-amd64",
-              "createOptions": "{\"HostConfig\": {\"Privileged\": true,\"Binds\":[\"C:/node-red:/home/node/.node-red\"],\"PortBindings\": {\"1880/tcp\": [{\"HostPort\": \"1880\"}]}}}"
+              "image": "$CONTAINER_REPOSITORY/nodered-azureiotdevice:0.2.0-amd64",
+              "createOptions": "{\"HostConfig\": {\"Privileged\": true,\"Binds\":[\"$LOCAL_PATH:/node-red\"],\"PortBindings\": {\"1880/tcp\": [{\"HostPort\": \"1880\"}]}}}"
+            }
+          },
+          "SimulatedTemperatureSensor": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "env":{
+              "MessageCount": {
+                "value": -1
+              }
+            },
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-simulated-temperature-sensor:1.0",
+              "createOptions": "{}"
             }
           }
         }
@@ -53,9 +68,6 @@
           "timeToLiveSecs": 7200
         }
       }
-    },
-    "NoderedModule": {
-      "properties.desired": {}
     }
   }
 }

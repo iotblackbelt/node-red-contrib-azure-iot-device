@@ -37,12 +37,12 @@ module.exports = function (RED) {
     };
 
     // Setup config node to represent IoT Edge Gateway
-    function IoTEdgeGateway(config) {
+    function AzureIoTEdgeGateway(config) {
         var node = this;
         node.hostname = config.hostname;
         node.certificate = config.certificate;
         RED.nodes.createNode(this, config);
-    };
+    }
 
     // Setup node-red node to represent Azure IoT Device
     function AzureIoTDevice(config) {
@@ -61,7 +61,7 @@ module.exports = function (RED) {
         node.protocol = config.protocol;
         node.methods = config.methods;
         node.information = config. information;
-        node.gateway = config.gateway;
+        node.gateway = RED.nodes.getNode(config.gateway);
 
         // Create the Node-RED node
         RED.nodes.createNode(this, config);
@@ -97,13 +97,13 @@ module.exports = function (RED) {
         var options = {};
         if (node.authenticationmethod === "sas") {
             // Check if group or individual enrollment
-            if (node.enrollmenttype === "group") {
+            if (node.connectiontype !== "constr" && node.enrollmenttype === "group") {
                 node.saskey = computeDerivedSymmetricKey(node.saskey, node.deviceid);
             }
         } else if (node.authenticationmethod === "x509") {
             options = {
-                cert : fs.readFileSync(node.x509certificate).toString(),
-                key : fs.readFileSync(node.x509key).toString()
+                cert : fs.readFileSync(node.x509certificate, 'utf-8'),
+                key : fs.readFileSync(node.x509key, 'utf-8')
             };
         };
         
@@ -111,7 +111,7 @@ module.exports = function (RED) {
         // Either use the provided conectiong string or use DPS to provision.
         node.log('Initiate IoT Device connection string: ' + node.deviceid);
         if (node.connectiontype === "constr") {
-            initiateClient(options, deviceProtocol);
+            initiateClient(node, options, deviceProtocol);
         } else if (node.connectiontype === "dps") {
             // Set provisioning protocol to selected (default to AMQP-WS)
             var provisioningProtocol = (node.protocol == "amqp") ? ProvisioningProtocols.amqp : 
@@ -130,7 +130,8 @@ module.exports = function (RED) {
             node.log('Provision IoT Device using DPS: ' + node.deviceid);
             provisioningClient.register(function(err, result) {
                 if (err) {
-                    node.log("Error registering device: " + JSON.stringify(err));
+                    node.error("Error registering device: " + JSON.stringify(err));
+                    setStatus(node, statusEnum.error);
                 } else {
                     node.log('Registration succeeded');
                     node.log('assigned hub=' + result.assignedHub);
@@ -149,19 +150,28 @@ module.exports = function (RED) {
         var connectionString = 'HostName=' + node.iothub + ';DeviceId=' + node.deviceid +
             ((node.authenticationmethod == 'sas') ? (';SharedAccessKey=' + node.saskey) : ';x509=true');
         if (node.gateway) {
-            connectionString = connectionString + ';GatewayHostName=' + node.gateway.hostname;
-            options.ca = fs.readFileSync(node.gateway.certificate).toString();
+            node.log(node.deviceid + ' -> Connect through gateway:' + node.gateway.hostname);
+            try {
+                options.ca = fs.readFileSync(node.gateway.certificate, 'utf-8');
+                connectionString = connectionString + ';GatewayHostName=' + node.gateway.hostname;
+            } catch(err){
+                node.error(node.deviceid + ' -> Certificate file error:' + err);
+                setStatus(node, statusEnum.error);
+            };
         }
+
         // Define the client
         node.log(node.deviceid + ' -> Connection string:' + connectionString);
         var client = Client.fromConnectionString(connectionString, deviceProtocol);
         client.setOptions(options);
         client.on('error', function (err) {
             node.log(node.deviceid + ' -> Device Client error:' + err);
+            setStatus(node, statusEnum.error);
         });
         client.open(function(err) {
             if (err) {
                 node.error(node.deviceid + ' -> Device client open error:' + err);
+                setStatus(node, statusEnum.error);
             } else {
                 node.log(node.deviceid + ' -> Device client connected.');
                 setStatus(node, statusEnum.connected);
@@ -191,7 +201,9 @@ module.exports = function (RED) {
                             node.log(node.deviceid + ' -> desired properties received: ' + JSON.stringify(payload));
                             var msg = {};
                             msg.topic = 'properties';
+                            msg.deviceId = node.deviceid;
                             msg.payload = payload;
+                            node.send(msg);
                             // Report back received desired properties ** Only for IoT Central Devices **
                             if (node.isIotcentral) {
                                 for (let setting in payload){
@@ -208,14 +220,13 @@ module.exports = function (RED) {
                                     }
                                 }
                             }
-                            node.send(msg);
                         });
                     }
                 });
 
                 node.on('close', function() {
                     node.log(node.deviceid + ' -> Azure IoT Device Client closed.');
-                    twin.removeAllListeners();
+                    deviceTwin.removeAllListeners();
                     client.removeAllListeners();
                     client.close();
                 });
@@ -241,7 +252,7 @@ module.exports = function (RED) {
                     client.onDeviceMethod(mthd, function(request, response) {
                         node.log(node.deviceid + ' -> Direct method call received: ' + request.methodName);
                         node.log(node.deviceid + ' -> Method payload:' + JSON.stringify(request.payload));
-                        node.send({payload: request, topic: "method"});
+                        node.send({payload: request, topic: "method", deviceId: node.deviceid});
 
                         // complete the response
                         response.send(200, request.methodName + ' was called on ' + node.deviceid + ' with payload: '
@@ -262,7 +273,7 @@ module.exports = function (RED) {
                 // Define the message listener
                 client.on('message', function (msg) {
                     node.log(node.deviceid + ' -> C2D message received, data: ' + msg.data);
-                    node.send({payload: msg, topic: "message"});
+                    node.send({payload: msg, topic: "message", deviceId: node.deviceid});
                     client.complete(msg, function (err) {
                     if (err) {
                         node.error(node.deviceid + ' -> C2D Message complete error: ' + err);
@@ -329,14 +340,6 @@ module.exports = function (RED) {
         return true;
     };
 
-    // Registration of the client into Node-RED
-    RED.nodes.registerType("iotedgegateway", IoTEdgeGateway, {
-        defaults: {
-            gatewayhostname: {value: ""},
-            x509edgecertificate: {value: ""}
-        }
-    });
-
     // Registration of the node into Node-RED
     RED.nodes.registerType("azureiotdevice", AzureIoTDevice, {
         defaults: {
@@ -354,6 +357,14 @@ module.exports = function (RED) {
             information: {value: []},
             isDownstream: {value: false},
             gateway: {value: null}
+        }
+    });
+
+    // Registration of the config node into Node-RED
+    RED.nodes.registerType("iotedgegateway", AzureIoTEdgeGateway, {
+        defaults: {
+            gatewayhostname: {value: ""},
+            x509edgecertificate: {value: ""}
         }
     });
 }

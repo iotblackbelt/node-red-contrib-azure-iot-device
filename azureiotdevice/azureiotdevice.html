@@ -1,25 +1,24 @@
 <script type="text/javascript">
     RED.nodes.registerType('iotedgegateway',{
         category: 'config',
-        color: '#a6bbcf',
         defaults: {
             hostname: {value:"", required: true},
             certificate: {value:"", required: true}
         },
         label: function() {
-            return "IoT Edge Gateway";
+            return "IoT Edge Gateway: " + this.hostname;
         }
     });
 </script>
 
 <script type="text/x-red" data-template-name="iotedgegateway">
     <div class="form-row">
-        <label for="node-input-hostname"><i class="icon-tag"></i> <span>Gateway Hostname</span></label>
-        <input type="text" id="node-input-hostname" placeholder="%hostname%">
+        <label for="node-config-input-hostname"><i class="icon-tag"></i> <span>Gateway Hostname</span></label>
+        <input type="text" id="node-config-input-hostname" placeholder="%hostname%">
     </div>
     <div class="form-row">
-        <label for="node-input-certificate"><i class="icon-tag"></i> <span>IoT Edge CA Certificate file</span></label>
-        <input type="text" id="node-input-certificate" placeholder="%CA Certificate%">
+        <label for="node-config-input-certificate"><i class="icon-tag"></i> <span>IoT Edge CA Certificate file</span></label>
+        <input type="text" id="node-config-input-certificate" placeholder="%CA Certificate%">
     </div>
 </script>
 
