@@ -27,10 +27,11 @@
   ],
   "node-red": {
     "nodes": {
-      "AzureIoTDevice": "azureiotdevice/azureiotdevice.js"
+      "AzureIoTDevice": "azure-iot-device/azureiotdevice.js"
     }
   },
   "author": {
     "name": "Eric van Uum"
-  }
+  },
+  "license": "MIT"
 }

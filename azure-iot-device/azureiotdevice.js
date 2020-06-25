@@ -1,3 +1,16 @@
+
+// Copyright (c) Eric van Uum. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+/**
+ * The "azure-iot-device" node enables you to represent an Azure IoT Device in Node-Red.
+ * The node provide connecting a device using connection string and DPS
+ * You can use a full connection string, a SAS key and a X.509 attestation
+ * 
+ * The device node enables D2C, C2D messages, Direct Methods, Desired and Reported properties.
+ * You can connect to IoT Edge as a downstream device, IoT Hub and IoT Central.
+ */
+
 module.exports = function (RED) {
     'use strict'
 
@@ -6,6 +19,7 @@ module.exports = function (RED) {
     var Client = require('azure-iot-device').Client;
     var Message = require('azure-iot-device').Message;
 
+    // Only AMQP(WS) or MQTT(WS) used as protocol, no HTTP support
     var Protocols = {
         amqp: require('azure-iot-device-amqp').Amqp,
         amqpWs: require('azure-iot-device-amqp').AmqpWs,
@@ -13,6 +27,7 @@ module.exports = function (RED) {
         mqttWs: require('azure-iot-device-mqtt').MqttWs
     };
 
+    // Only AMQP(WS) or MQTT(WS) used as protocol, no HTTP support
     var ProvisioningProtocols = {
         amqp: require('azure-iot-provisioning-device-amqp').Amqp,
         amqpWs: require('azure-iot-provisioning-device-amqp').AmqpWs,
@@ -75,6 +90,9 @@ module.exports = function (RED) {
     var setStatus = function (node, status) {
         node.status({ fill: status.fill, shape: status.shape, text: status.text });
     };
+
+    // Array to hold the received methods
+    var directMethods = {};
 
     function computeDerivedSymmetricKey(masterKey, regId) {
     return crypto.createHmac('SHA256', Buffer.from(masterKey, 'base64'))
@@ -198,9 +216,9 @@ module.exports = function (RED) {
 
                         // Get the desired properties
                         twin.on('properties.desired', function(payload) {
-                            node.log(node.deviceid + ' -> desired properties received: ' + JSON.stringify(payload));
+                            node.log(node.deviceid + ' -> Desired properties received: ' + JSON.stringify(payload));
                             var msg = {};
-                            msg.topic = 'properties';
+                            msg.topic = 'Property';
                             msg.deviceId = node.deviceid;
                             msg.payload = payload;
                             node.send(msg);
@@ -237,35 +255,30 @@ module.exports = function (RED) {
                         //Converting string to JSON Object
                         msg.payload = JSON.parse(msg.payload);
                     }
-                    if (msg.topic === 'telemetry') {
+                    if (msg.topic === 'Telemetry') {
                         sendDeviceTelemetry(node, client, msg.payload);
-                    } else if (msg.topic === 'properties' && deviceTwin) {
+                    } else if (msg.topic === 'Property' && deviceTwin) {
                         sendDeviceProperties(node, deviceTwin, msg.payload);
+                    } else if (msg.topic === 'Command') { 
+                        sendMethodResponse(node, msg.payload)
+                    } else {
+                        node.error(node.deviceid + ' -> Incorrect input. Must be of type \"Telemetry\" or \"Property\" or \"Command\".');
                     }
                 });
 
                 // Listen to commands for defined direct methods
                 for (let method in node.methods) {
-                    node.log(node.deviceid + ' -> adding direct method: ' + node.methods[method].name);
+                    node.log(node.deviceid + ' -> adding synchronous command: ' + node.methods[method].name);
                     var mthd = node.methods[method].name;
                     // Define the method on the client
                     client.onDeviceMethod(mthd, function(request, response) {
-                        node.log(node.deviceid + ' -> Direct method call received: ' + request.methodName);
-                        node.log(node.deviceid + ' -> Method payload:' + JSON.stringify(request.payload));
-                        node.send({payload: request, topic: "method", deviceId: node.deviceid});
+                        node.log(node.deviceid + ' -> Command call received: ' + request.methodName);
+                        node.log(node.deviceid + ' -> Command payload:' + JSON.stringify(request.payload));
+                        node.send({payload: request, topic: "Command", deviceId: node.deviceid});
 
-                        // complete the response
-                        response.send(200, request.methodName + ' was called on ' + node.deviceid + ' with payload: '
-                                + (typeof(request.payload) === 'string' ? request.payload : JSON.stringify(request.payload)), function(err) {
-                            if(!!err) {
-                                node.error(node.deviceid + ' -> An error ocurred when sending a method response: ' +
-                                    err.toString());
-                            } else {
-                                node.log(node.deviceid + ' -> Response to method ' + request.methodName +
-                                    ' sent successfully.' );
-                            }
-                        });
-                    }); 
+                        // Store response for later processing
+                        directMethods[request.requestId] = response;
+                    });
                 };
 
                 // Start listening to C2D messages
@@ -273,13 +286,18 @@ module.exports = function (RED) {
                 // Define the message listener
                 client.on('message', function (msg) {
                     node.log(node.deviceid + ' -> C2D message received, data: ' + msg.data);
-                    node.send({payload: msg, topic: "message", deviceId: node.deviceid});
+                    var message = {
+                        messageId: msg.messageId,
+                        data: msg.data.toString('utf8'),
+                        properties: msg.properties
+                    };
+                    node.send({payload: message, topic: "Message", deviceId: node.deviceid});
                     client.complete(msg, function (err) {
-                    if (err) {
-                        node.error(node.deviceid + ' -> C2D Message complete error: ' + err);
-                    } else {
-                        node.log(node.deviceid + ' -> C2D Message completed.');
-                    }
+                        if (err) {
+                            node.error(node.deviceid + ' -> C2D Message complete error: ' + err);
+                        } else {
+                            node.log(node.deviceid + ' -> C2D Message completed.');
+                        }
                     });
                 });
             }
@@ -300,7 +318,7 @@ module.exports = function (RED) {
                     if(err) {
                         node.error(node.deviceid + ' -> An error ocurred when sending telemetry: ' + err);
                     } else {
-                        node.log(node.deviceid + ' -> sent telemetry: ' + JSON.stringify(message));
+                        node.log(node.deviceid + ' -> Telemetry sent: ' + JSON.stringify(message));
                     }
                 });
                 
@@ -314,11 +332,31 @@ module.exports = function (RED) {
     function sendDeviceProperties(node, twin, properties) {
         twin.properties.reported.update(properties, function (err) {
             if (err) {
-                node.error(node.deviceid + ' -> sent device properties failed: ' + err);
+                node.error(node.deviceid + ' -> Sending device properties failed: ' + err);
             } else {
-                node.log(node.deviceid + ' -> sent device properties: ' + JSON.stringify(properties)); 
+                node.log(node.deviceid + ' -> Device properties sent: ' + JSON.stringify(properties));
             }
         });
+    };
+
+    // Send device dreict method response.
+    function sendMethodResponse(node, methodResponse) {
+        // Get the response object create at request time.
+        var response = directMethods[methodResponse.requestId];
+
+        // complete the response
+        response.send(methodResponse.status, methodResponse.response, function(err) {
+            if(!!err) {
+                node.error(node.deviceid + ' -> An error ocurred when sending a method response: ' +
+                    err.toString());
+            } else {
+                node.log(node.deviceid + ' -> Response to method \"' + methodResponse.method +
+                    '\" sent successfully.' );
+            }
+        });
+
+        // Delete the response object
+        delete directMethods[response.requestId];
     };
 
     // @returns true if message object is valid, i.e., a map of field names to numbers, strings and booleans.
