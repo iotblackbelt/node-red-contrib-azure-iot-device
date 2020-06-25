@@ -203,8 +203,14 @@ module.exports = function (RED) {
                     } else {
                         node.log(node.deviceid + ' -> Device twin created.');
                         node.log(node.deviceid + ' -> Twin contents:' + JSON.stringify(twin.properties));
+                        // Send the twin properties to Node Red
+                        var msg = {};
+                        msg.topic = 'property';
+                        msg.deviceId = node.deviceid;
+                        msg.payload = twin.properties;
+                        node.send(msg);
                         deviceTwin = twin;
-                        // Send the information properties
+                        // Send the device information properties
                         if (node.information) {
                             node.log(node.deviceid + ' -> Sending device information.');
                             var information = {};
@@ -218,7 +224,7 @@ module.exports = function (RED) {
                         twin.on('properties.desired', function(payload) {
                             node.log(node.deviceid + ' -> Desired properties received: ' + JSON.stringify(payload));
                             var msg = {};
-                            msg.topic = 'Property';
+                            msg.topic = 'property';
                             msg.deviceId = node.deviceid;
                             msg.payload = payload;
                             node.send(msg);
@@ -255,14 +261,14 @@ module.exports = function (RED) {
                         //Converting string to JSON Object
                         msg.payload = JSON.parse(msg.payload);
                     }
-                    if (msg.topic === 'Telemetry') {
+                    if (msg.topic === 'telemetry') {
                         sendDeviceTelemetry(node, client, msg.payload);
-                    } else if (msg.topic === 'Property' && deviceTwin) {
+                    } else if (msg.topic === 'property' && deviceTwin) {
                         sendDeviceProperties(node, deviceTwin, msg.payload);
-                    } else if (msg.topic === 'Command') { 
+                    } else if (msg.topic === 'command') { 
                         sendMethodResponse(node, msg.payload)
                     } else {
-                        node.error(node.deviceid + ' -> Incorrect input. Must be of type \"Telemetry\" or \"Property\" or \"Command\".');
+                        node.error(node.deviceid + ' -> Incorrect input. Must be of type \"telemetry\" or \"property\" or \"command\".');
                     }
                 });
 
@@ -274,7 +280,7 @@ module.exports = function (RED) {
                     client.onDeviceMethod(mthd, function(request, response) {
                         node.log(node.deviceid + ' -> Command call received: ' + request.methodName);
                         node.log(node.deviceid + ' -> Command payload:' + JSON.stringify(request.payload));
-                        node.send({payload: request, topic: "Command", deviceId: node.deviceid});
+                        node.send({payload: request, topic: "command", deviceId: node.deviceid});
 
                         // Store response for later processing
                         directMethods[request.requestId] = response;
@@ -291,7 +297,7 @@ module.exports = function (RED) {
                         data: msg.data.toString('utf8'),
                         properties: msg.properties
                     };
-                    node.send({payload: message, topic: "Message", deviceId: node.deviceid});
+                    node.send({payload: message, topic: "message", deviceId: node.deviceid});
                     client.complete(msg, function (err) {
                         if (err) {
                             node.error(node.deviceid + ' -> C2D Message complete error: ' + err);
