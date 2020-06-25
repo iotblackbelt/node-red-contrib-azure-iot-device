@@ -207,7 +207,7 @@ module.exports = function (RED) {
                         var msg = {};
                         msg.topic = 'property';
                         msg.deviceId = node.deviceid;
-                        msg.payload = JSON.stringify(twin.properties);
+                        msg.payload = JSON.parse(JSON.stringify(twin.properties));
                         node.send(msg);
                         deviceTwin = twin;
                         // Send the device information properties
