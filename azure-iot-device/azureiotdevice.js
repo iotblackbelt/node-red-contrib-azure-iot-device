@@ -278,7 +278,7 @@ module.exports = function (RED) {
                     var mthd = node.methods[method].name;
                     // Define the method on the client
                     client.onDeviceMethod(mthd, function(request, response) {
-                        node.log(node.deviceid + ' -> Command call received: ' + request.methodName);
+                        node.log(node.deviceid + ' -> Command received: ' + request.methodName);
                         node.log(node.deviceid + ' -> Command payload:' + JSON.stringify(request.payload));
                         node.send({payload: request, topic: "command", deviceId: node.deviceid});
 
