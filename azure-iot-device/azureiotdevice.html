@@ -1,36 +1,4 @@
 <script type="text/javascript">
-    RED.nodes.registerType('iotedgegateway',{
-        category: 'config',
-        defaults: {
-            hostname: {value:"", required: true},
-            certificate: {value:"", required: true}
-        },
-        label: function() {
-            return "IoT Edge Gateway: " + this.hostname;
-        }
-    });
-</script>
-
-<script type="text/x-red" data-template-name="iotedgegateway">
-    <div class="form-row">
-        <label for="node-config-input-hostname"><i class="icon-tag"></i> <span>Gateway Hostname</span></label>
-        <input type="text" id="node-config-input-hostname" placeholder="%hostname%">
-    </div>
-    <div class="form-row">
-        <label for="node-config-input-certificate"><i class="icon-tag"></i> <span>IoT Edge CA Certificate</span></label>
-        <input type="text" id="node-config-input-certificate" placeholder="%CA Certificate%">
-    </div>
-</script>
-
-<script type="text/x-red" data-template-name="iotedgegateway">
-    <p>Azure IoT Edge Gateway node enables the Azure IoT Device node to connect to a transparant gateway.</p>
-</script>
-
-<script type="text/x-red" data-help-name="iotedgegateway">
-    <p>Azure IoT Edge Gateway node enables the Azure IoT Device node to connect to a transparant gateway. How to create an IoT Edge as a transparant gateway can be found here: https://docs.microsoft.com/en-us/azure/iot-edge/how-to-create-transparent-gateway</p>
-</script>
-
-<script type="text/javascript">
     RED.nodes.registerType('azureiotdevice',{
         category: 'Azure IoT',
         color: '#00A4EF',
@@ -48,7 +16,8 @@
             protocol: {value: "", required:true},
             methods: {value: []},
             information: {value: []},
-            gateway: { value: null, required:false, type:"iotedgegateway" }
+            gatewayHostname: {value:"", required: false},
+            gatewayCertificate: {value:"", required: false}
         },
         inputs:1,
         outputs:1,
@@ -61,6 +30,34 @@
         },
         oneditprepare: function() {
             let node = this;
+
+            // Local files for certificates
+            function updateFileUpload() {
+                if ($("#node-config-input-uselocalfiles").is(':checked')) {
+                    $(".device-config-input-path").show();
+                    $(".device-config-input-data").hide();
+                } else {
+                    $(".device-config-input-data").show();
+                    $(".device-config-input-path").hide();
+                }
+            }
+            $("#node-config-input-uselocalfiles").on("click",function() {
+                updateFileUpload();
+            });
+
+            // Local files for gateway certificates
+            function updateGatewayFileUpload() {
+                if ($("#node-config-input-gateway-uselocalfiles").is(':checked')) {
+                    $(".device-config-input-gateway-path").show();
+                    $(".device-config-input-gateway-data").hide();
+                } else {
+                    $(".device-config-input-gateway-data").show();
+                    $(".device-config-input-gateway-path").hide();
+                }
+            }
+            $("#node-config-input-gateway-uselocalfiles").on("click",function() {
+                updateFileUpload();
+            });
 
             // Enable tabbed interaction
             let tabs = RED.tabs.create({
@@ -143,7 +140,7 @@
                     id: "node-input-device-methods-name" + id,
                     class: "deviceMethodName",
                     type: "text",
-                    style: "margin-left:5px;width:75%;",
+                    style: "margin-left:5px;width:85%;",
                     placeholder: "name"
                 }).appendTo(row);
 
@@ -255,7 +252,7 @@
                     id: "node-input-device-information-value" + id,
                     class: "deviceInformationValue",
                     type: "text",
-                    style: "margin-left:5px;width:40%",
+                    style: "margin-left:5px;width:50%",
                     placeholder: "value"
                 }).appendTo(row);
 
@@ -299,7 +296,7 @@
                 if (!informationItemCount || informationItemCount < 0) {
                     informationItemCount = 0;
                 }
-                generateInformationEntry({ name: "", value: "" }, informationItemCount++); // length is every time one more than index
+                generateInformationEntry({ name: "", value: "", json: "" }, informationItemCount++); // length is every time one more than index
                 $("#node-input-device-information-container-div").scrollTop(
                     $("#node-input-device-information-container-div").get(0).scrollHeight
                 );
@@ -369,7 +366,7 @@
                         .val(),
                     value: $(this)
                         .find(".deviceInformationValue")
-                        .val(),
+                        .val()
                 });
             });
         }
@@ -423,13 +420,29 @@
                 <label for="node-input-saskey"><i class="icon-tag"></i> <span>SAS Key</span></label>
                 <input type="password" id="node-input-saskey" placeholder="%primairy or secundairy key%">
             </div>
-            <div class="form-row x509-row">
-                <label for="node-input-x509certificate"><i class="icon-tag"></i> <span>X.509 Certificate</span></label>
-                <input type="text" id="node-input-x509certificate" placeholder="%X509 certificate text%"/>
+            <div class="form-row x509-row" class="hide" id="node-config-row-uselocalfiles">
+                <input type="checkbox" id="node-config-input-uselocalfiles" style="display: inline-block; width: auto; vertical-align: top;">
+                <label for="node-config-input-uselocalfiles" style="width: 70%;">Use local files?</label>
             </div>
             <div class="form-row x509-row">
-                <label for="node-input-x509key"><i class="icon-tag"></i> <span>X.509 Key</span></label>
-                <input type="text" id="node-input-x509key" placeholder="%X509 key text%"/>
+                <label for="node-input-x509certificate"><i class="fa fa-file-text-o"></i> <span>X.509 Certificate</span></label>
+                <span class="device-config-input-data">
+                    <label class="red-ui-button" for="node-config-input-certfile"><i class="fa fa-upload"></i> <span>Upload</span></label>
+                    <input class="hide" type="file" id="node-config-input-certfile">
+                    <span id="device-config-certname" style="width: calc(100% - 280px); overflow: hidden; line-height:34px; height:34px; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle;"> </span>
+                    <button class="red-ui-button red-ui-button-small" id="device-config-button-cert-clear" style="margin-left: 10px"><i class="fa fa-times"></i></button>
+                </span>
+                <input class="hide device-config-input-path" type="text" id="node-input-x509certificate" placeholder="%X509 certificate file%"/>
+            </div>
+            <div class="form-row x509-row">
+                <label for="node-input-x509key"><i class="fa fa-file-text-o"></i> <span>X.509 Key</span></label>
+                <span class="device-config-input-data">
+                    <label class="red-ui-button" for="node-config-input-keyfile"><i class="fa fa-upload"></i> <span>Upload</span></label>
+                    <input class="hide" type="file" id="node-config-input-keyfile">
+                    <span id="device-config-keyname" style="width: calc(100% - 280px); overflow: hidden; line-height:34px; height:34px; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle;"> </span>
+                    <button class="red-ui-button red-ui-button-small" id="device-config-button-key-clear" style="margin-left: 10px"><i class="fa fa-times"></i></button>
+                </span>
+                <input class="hide device-config-input-path" type="text" id="node-input-x509key" placeholder="%X509 key file%"/>
             </div>
             <div class="form-row">
                 <label for="node-input-protocol"><i class="icon-tag"></i> <span>Protocol</span></label>
@@ -470,9 +483,25 @@
             </div>
         </div>
         <div id="compact-device-tab-iotedge" style="display:none">
+            <div class="form-row x509-row" class="hide" id="node-config-row-gateway-uselocalfiles">
+                <input type="checkbox" id="node-config-input-gateway-uselocalfiles" style="display: inline-block; width: auto; vertical-align: top;">
+                <label for="node-config-input-gateway-uselocalfiles" style="width: 70%;">Use local files?</label>
+            </div>
             <div class="form-row">
-                <label for="node-input-gateway"><i class="icon-tag"></i> <span>IoT Edge Gateway</span></label>
-                <input type="text" id="node-input-gateway" placeholder="%IoT Edge Gateway%">
+                <label for="node-input-gatewayHostname"><i class="icon-tag"></i> <span>Hostname</span></label>
+                <input type="text" id="node-input-gatewayHostname" placeholder="%IoT Edge Hostname%">
+                <label for="node-input-gatewayCertificate"><i class="fa fa-file-text-o"></i> <span>Gateway Certificate</span></label>
+                <input type="text" id="node-input-gatewayCertificate" placeholder="%IoT Edge X.509 Certificate%">
+            </div>
+            <div class="form-row x509-row">
+                <label for="node-input-gatewayCertificate"><i class="fa fa-file-text-o"></i> <span>X.509 Gateway CA Certificate</span></label>
+                <span class="device-config-input-gateway-data">
+                    <label class="red-ui-button" for="node-config-input-certfile"><i class="fa fa-upload"></i> <span>Upload</span></label>
+                    <input class="hide" type="file" id="node-config-input-gatewayCertfile">
+                    <span id="device-config-gatewayCertname" style="width: calc(100% - 280px); overflow: hidden; line-height:34px; height:34px; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle;"> </span>
+                    <button class="red-ui-button red-ui-button-small" id="device-config-button-gatewaycert-clear" style="margin-left: 10px"><i class="fa fa-times"></i></button>
+                </span>
+                <input class="hide device-config-input-gateway-path" type="text" id="node-input-gatewayCertificate" placeholder="%X509 certificate file%"/>
             </div>
         </div>
     </div>
