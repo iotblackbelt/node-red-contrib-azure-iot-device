@@ -13,7 +13,7 @@ Steps to install this node:
 1. In your Node-RED user directory, typically ~/.node-red, run:
 
     ```
-    npm install &lt;location of node module&gt;
+    npm install <location of node module>
     ```
 
     For example, on Mac OS or Linux, if the node is located at ~/my-nodes/node-red-contrib-azure-iot-device you would do the following:
@@ -27,7 +27,7 @@ Steps to install this node:
 
     ```
     cd C:\Users\<user>\.node_red
-    npm install &lt;Windows Directory&gt;\node-red-contrib-azure-iot-device
+    npm install <Windows Directory>\node-red-contrib-azure-iot-device
     ```
 
 This creates a symbolic link to your node module project directory in ~/.node-red/node_modules so that Node-RED will discover the node when it starts. Any changes to the node’s file can be picked up by simply restarting Node-RED. On Windows, use npm 5.x or greater.<br/>
