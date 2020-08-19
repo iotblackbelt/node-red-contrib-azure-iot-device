@@ -1,67 +1,139 @@
-# Deploy and setup the Azure IoT Device Node
-In the document we describe how to install and setup the Node-RED Azure IoT Device node.
+# Use the Azure IoT Device Node
+In this document we describe how to use the Azure IoT Device node for D2C and C2D communication.
 
-## Deploy the node to your Node-RED
-The node can be manually deployed using the 'npm install &lt;folder&gt;' command. How to get started with Node-RED can be found here: https://nodered.org/docs/getting-started/.
+## Supported interactions
+The Azure Device node can be used for:
+- sending telemetry
+- receiving and responding to commands
+- receiving desired properties
+- updating reported properties
+- receiving C2D messages
 
-Steps to install this node:
+Each interaction will be descrbide in detail in the next sections. The node has a single input and a single output. The node determines the actions to take, based on the topic of Node-RED message.
 
-1. [Install Node-RED](https://nodered.org/docs/getting-started/local) on your machine or on an [Azure virtual machine](https://nodered.org/docs/getting-started/azure)
-2. Clone this repository to a local directory on your machine runing Node-RED: <code>git clone https://github.com/iotblackbelt/node-red-contrib-azure-iot-device.git</code>
-3. In your Node-RED user directory, typically ~/.node-red, run:
+### Input topics
+The following input topics are supported:
+- 'telemetry' - telemetry to be send
+- 'property' - properties to report
+- 'response' - a response to a received direct method
 
-    <code>npm install &lt;location of node module&gt;</code><br/>
-    For example, on Mac OS or Linux, if the node is located at ~/my-nodes/node-red-contrib-azure-iot-device you would do the following:
+### Output topics
+The following output topics are supported:
+- 'provisioning' - the outcome of the provisioning process
+- 'property' - desired properties received
+- 'command' - a received direct method
+- 'message' - a received C2D message
 
-    <code>cd ~/.node-red<br/>
-    npm install ~/my-nodes/node-red-contrib-azure-iot-device</code>
+## Input telemetry
+Sending telemetry requires you to create a connection to the node input and send a node message in the following format:
 
-    On Windows you would do:
+```json
+{
+    'topic': 'telemetry',
+    'payload': { 
+        '<name>': '<value>',
+        ...
+    }
+}
+```
 
-    <code>cd C:\Users\<user>\.node_red<br/>
-    npm install &lt;Windows Directory&gt;\node-red-contrib-azure-iot-device</code>
+## Input reported properties
+Sending reported properties requires you to create a connection to the node input and send a node message in the following format:
 
-This creates a symbolic link to your node module project directory in ~/.node-red/node_modules so that Node-RED will discover the node when it starts. Any changes to the node’s file can be picked up by simply restarting Node-RED. On Windows, use npm 5.x or greater.<br/>
+```json
+{
+    'topic': 'property',
+    'payload': { 
+        '<name>': <value>,
+        ...
+    }
+}
+```
 
->Note : npm will automatically add an entry for your module in the package.json file located in your user directory. If you don't want it to do this, use the --no-save option to the npm install command.
+If your device is an IoT Central device you should use the following format:
+```json
+{
+    'topic': 'telemetry',
+    'payload': { 
+        '<name>': {'value': <value>},
+        ...
+    }
+}
+```
 
-## Good to know
-The Azure IoT Device Node-RED node can be setup as an Azure IoT Device using multiple attestation methods and provisioning. In this README I will not explain the details of the provisioning and attestation methods, but will explain what you need to use as node settings to enable them.<br/>
+## Input a command response
+Sending a command response requires you to create a connection to the node input and send a node message in the following format:
 
->For more information on provsionig read:
->* Manual provisioning with [Azure IoT Hub](https://docs.microsoft.com/en-us/azure/iot-hub/)
->    * Using the Azure Portal, Azure CLI, Visual Studio Code, Powershell or the Azure IoT Services SDK.
->* Automated provisioning using [Azure IoT Device Provisioning Services](https://docs.microsoft.com/en-us/azure/iot-dps/)
+```json
+{
+    'topic': 'response',
+    'requestId': <request_id>,
+    'status': <status_code>,
+    'payload': { 
+        '<name>': <value>,
+        ...
+    }
+}
+```
 
-The Azure IoT Device Node-RED node can either use a symmetric key or a X.509 certificate as the attestation mechanism. More information on using symmetric key or X.509 certificates can be found in the Azure IoT Hub and Device Provisioning Services documentation online.
+The request_id is provided by the received direct method, and will need to be returned to the Azure IoT platform to establish the connection between command and response.
+The status property is the device-supplied status of method execution. 
 
-## Create and setup an Azure IoT Device Node-RED node
-Once you installed Node-RED and the Azure IoT Device Node-RED node, run Node-RED and browse to the Node-RED website on your machine &lt;node-red-machine&gt;:1880.
-In the nodes section on the left-hand side, scroll down to the bottom where you will find the Azure IoT Device node: 
-<div><img alt="Azure IoT Device node" style="align:left;float:none" src="images/node.png"/></div>
+## Output property message
+When the node is deployed using Device Provisioning a node message in the following format will be received on the output, when the provisioning is successful:
 
-### Steps to setup the node
-Like any other Node-RED node you can create an instance of this node by dragging it onto a flow. Once you've dragged it into the flow you have to setup the node as a specific Azure IoT device. In this section I will explain the different setting-tabs and how you can use them to define the behavior of the Azure IoT device.
+```json
+{
+    'topic':'provisioning',
+    'deviceId':'<device_id>',
+    'payload': {
+        'registrationId':'<device_id>',
+        'createdDateTimeUtc':'UTC_timestamp>',
+        'assignedHub':'<iot_hub_name>.azure-devices.net',
+        'deviceId':'<device_id>',
+        'status':'<provisioning_status>',
+        'substatus':'<provisioning_substatus>',
+        'lastUpdatedDateTimeUtc':'<UTC_tinestamp>',
+        'etag':'<etag>',
+        'payload': { <custom_provisioning_payload> } /* optional */
+    }
+}
+```
 
-#### Device Identity
-You need to use the Device Identity tab to define the device and the way it connects to Azure IoT. Depending on the choices you make in the drop-down boxes you will see addtional fields and options.
-<div><img alt="Device identity tab" style="align:left;float:none" src="images/device-identity-tab-00.png"/></div>
+You can use this provisioning message to do some additional processing on the device side. If you use [custom allocation policies](https://docs.microsoft.com/en-us/azure/iot-dps/how-to-use-custom-allocation-policies) you can return a [payload to the device](https://docs.microsoft.com/en-us/azure/iot-dps/how-to-send-additional-data) that can be used for processing.
 
-##### Fields and options
-The following table contains explanation of the fields and options on the **Device Indentity** tab. Some fileds will only be visible depending on selection choices made in other fields.
-| Field/option | Description | Depends on |
-| --- | --- | --- |
-| Device ID | This field wil contain the device Id of the Azure IoT device as it is/will be on IoT Hub or IoT Central. | - |
-| Connection Type | This option indicates whether the device will use a preset connection string or use [Device Provisioning Service](https://docs.microsoft.com/en-us/azure/iot-dps/). Depending on the option you select different fields will be shown to fill. | - |
-| Authentication Method | Azure IoT supports two authentication types, SAS token-based authentication and X.509 certificate authentication (individual and CA based). | - |
-| IoT Hub Hostname | The [Azure IoT Hub](https://docs.microsoft.com/en-us/azure/iot-hub/) Hostname '%iothubname%.azure-device.net'. The name can be found in the Azure portal on the overview page of the IoT Hub. | Connection Type |
-| IoT Central Device | Option to indicate whether the device is an [Azure IoT Central](https://docs.microsoft.com/en-us/azure/iot-central/) device.  | Connection Type |
-| Scope ID | The device provisioning Scope ID. This ID identifies the specific Azure Device Provisioning service to use. Azure IoT Central devices can only be provisioned using Device Provisioning. | Connection Type |
-| Enrollment type | Selection to indicate whether the device provisioning enrollment is an individual or a group enrollment. | Connection Type |
-| Authentication Method | Selection to indecate whther the attestation method used is shared access key (SAS) or certificate (X.509). | - |
-| SAS Key | The [symmetric key](https://docs.microsoft.com/en-us/azure/iot-dps/concepts-symmetric-key-attestation) to authenticate with the Device Provisioning Service (DPS) instance or Azure IOT Central. | Authentication Method |
-| X.509 Certificate | The [X.509](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-x509ca-overview) certifate, containing the full of the certificate tree for the IoT device. The certificate can be uploaded. | Authentication Method |
-| X.509 Key | The Azure IoT device X.509 key. The key can be uploaded. | Authentication Method |
-| Protocol | The Azure IoT platform supports three communication [protocols](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-devguide-protocols): HTTPS, MQTT and AMQP. AMQP and MQTT can also be used over websockets. In this node you can only select the MQTT and AMQP, because these protocols support direct communicaton between device and cloud. If you need to use the 443 port outbound from the device, you can use the websockets options. | - |
+## Output provisioning message
+When you update the desired properties on a device twin in Azure, the node will send a node message to the output containing the updated desired properties:
 
-#### Device Identity
+```json
+    {
+        'topic':'property',
+        'deviceId':'device_id',
+        'payload': {
+            '<property>': <value>,
+            ...
+            '$version': <version_number>
+        }
+    }
+```
+
+You can use this message to do additional processing on the device.
+
+## Output command message
+When you send a direct method to the device from Azure, the node will send a node message to the output containing the command and its parameters:
+
+```json
+    {
+        'topic':'command',
+        'deviceId':'device_id',
+        'requestId': '<request_id>',
+        'methodName': '<method_name>',
+        'payload': {
+            '<paramter>': <value>,
+            ...
+         }
+    }
+```
+
+You can use this message to do additional processing on the device. The Azure IoT Platform expects a response on a direct method. To send this response 
+

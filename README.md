@@ -1,6 +1,5 @@
 # Azure IoT Device Node-RED node
 The Azure IoT Device Node-RED node is a node that can be used to connect Node-RED to the Azure IoT platform. It can connect to Azure IoT Hub, Azure IoT Central, and use Azure IoT Edge as a transparant gateway. The node has been created to support the different attestation methodes (SAS, X.509) as well as use Azure Device Provisioning service. The node has been developed using the [Azure IoT Node.js SDK](https://github.com/Azure/azure-iot-sdk-node/).
-The Azure IoT Device Node-RED node can be used to connect your device to the Azure IoT platform using Node-RED. 
 
 > DISCLAIMER: The Azure IoT Device Node-RED node is developed as is. Please be aware that use of this code and the node is at your own risk.
 

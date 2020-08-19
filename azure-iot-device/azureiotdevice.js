@@ -287,10 +287,10 @@ module.exports = function (RED) {
                         sendDeviceTelemetry(node, client, msg.payload);
                     } else if (msg.topic === 'property' && deviceTwin) {
                         sendDeviceProperties(node, deviceTwin, msg.payload);
-                    } else if (msg.topic === 'command') { 
+                    } else if (msg.topic === 'response') { 
                         sendMethodResponse(node, msg.payload)
                     } else {
-                        node.error(node.deviceid + ' -> Incorrect input. Must be of type \"telemetry\" or \"property\" or \"command\".');
+                        node.error(node.deviceid + ' -> Incorrect input. Must be of type \"telemetry\" or \"property\" or \"response\".');
                     }
                 });
 
