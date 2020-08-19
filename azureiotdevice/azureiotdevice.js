@@ -53,6 +53,9 @@ module.exports = function (RED) {
         error: { fill: "grey", shape:"dot", text: "Error" }
     };
 
+    // Array to hold the direct method responses
+    var methodResponses = [];
+
     // Setup node-red node to represent Azure IoT Device
     function AzureIoTDevice(config) {
         // Store node for further use
@@ -89,9 +92,7 @@ module.exports = function (RED) {
         node.status({ fill: status.fill, shape: status.shape, text: status.text });
     };
 
-    // Array to hold the received methods
-    var directMethods = {};
-
+    // Compute device SAS key
     function computeDerivedSymmetricKey(masterKey, regId) {
     return crypto.createHmac('SHA256', Buffer.from(masterKey, 'base64'))
         .update(regId, 'utf8')
@@ -288,7 +289,7 @@ module.exports = function (RED) {
                     } else if (msg.topic === 'property' && deviceTwin) {
                         sendDeviceProperties(node, deviceTwin, msg.payload);
                     } else if (msg.topic === 'response') { 
-                        sendMethodResponse(node, msg.payload)
+                        sendMethodResponse(node, msg)
                     } else {
                         node.error(node.deviceid + ' -> Incorrect input. Must be of type \"telemetry\" or \"property\" or \"response\".');
                     }
@@ -304,8 +305,21 @@ module.exports = function (RED) {
                         node.log(node.deviceid + ' -> Command payload: ' + JSON.stringify(request.payload));
                         node.send({payload: request, topic: "command", deviceId: node.deviceid});
 
-                        // Store response for later processing
-                        directMethods[request.requestId] = response;
+                        // Now wait for the response
+                        getResponse(node, request.requestId).then(function(rspns){
+                            node.log(node.deviceid + ' -> Method response status: ' + rspns.status);
+                            node.log(node.deviceid + ' -> Method response payload: ' + JSON.stringify(rspns.payload));
+                            response.send(rspns.status, rspns.payload, function(err) {
+                                if (err) {
+                                node.log(node.deviceid + ' -> Failed sending method response: ' + err);
+                                } else {
+                                node.log(node.deviceid + ' -> Successfully sent method response: ' + request.methodName);
+                                }
+                            });
+                        })
+                        .catch(function(err){
+                            node.error(node.deviceid + ' -> Failed sending method response: \"' + request.methodName + '\", error: ' + err);
+                        });
                     });
                 };
 
@@ -367,25 +381,42 @@ module.exports = function (RED) {
         });
     };
 
-    // Send device dreict method response.
+    // Send device direct method response.
     function sendMethodResponse(node, methodResponse) {
-        // Get the response object create at request time.
-        var response = directMethods[methodResponse.requestId];
-
-        // complete the response
-        response.send(methodResponse.status, methodResponse.response, function(err) {
-            if(!!err) {
-                node.error(node.deviceid + ' -> An error ocurred when sending a method response: ' +
-                    err.toString());
-            } else {
-                node.log(node.deviceid + ' -> Response to method \"' + methodResponse.method +
-                    '\" sent successfully.' );
-            }
-        });
-
-        // Delete the response object
-        delete directMethods[response.requestId];
+        // Push the reponse to the array
+        node.log(node.deviceid + ' -> Creating response for command: ' + methodResponse.methodName);
+        methodResponses.push(
+            {requestId: methodResponse.requestId, response: methodResponse}
+        );
     };
+
+    // Get method response using promise, and retry, and slow backoff
+    function getResponse(node, requestId){
+        var retries = 20;
+        var timeOut = 1000;
+        // Retrieve client using progressive promise to wait for method response
+        var promise = Promise.reject();
+        for(var i=1; i <= retries; i++) {
+            promise = promise.catch( function(){
+                    var methodResponse = methodResponses.find(function(m){return m.requestId === requestId});
+                    if (methodResponse){
+                        // get the response and clean the array
+                        methodResponses.splice(methodResponses.findIndex(function(m){return m.requestId === requestId}),1);
+                        return methodResponse.response;
+                    }
+                    else {
+                        throw new Error(node.deviceid + ' -> Module Method Response not initiated..');
+                    }
+                })
+                .catch(function rejectDelay(reason) {
+                    retries++;
+                    return new Promise(function(resolve, reject) {
+                        setTimeout(reject.bind(null, reason), timeOut * ((retries % 10) + 1));
+                    });
+                });
+        }
+        return promise;
+    }
 
     // @returns true if message object is valid, i.e., a map of field names to numbers, strings and booleans.
     function validateMessage(message) {

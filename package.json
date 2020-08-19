@@ -27,7 +27,7 @@
   ],
   "node-red": {
     "nodes": {
-      "AzureIoTDevice": "azure-iot-device/azureiotdevice.js"
+      "AzureIoTDevice": "azureiotdevice/azureiotdevice.js"
     }
   },
   "author": {
