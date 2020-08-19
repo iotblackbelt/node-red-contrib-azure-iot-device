@@ -27,7 +27,7 @@ The following output topics are supported:
 ## Input telemetry
 Sending telemetry requires you to create a connection to the node input and send a node message in the following format:
 
-```json
+```
 {
     'topic': 'telemetry',
     'payload': { 
@@ -40,7 +40,7 @@ Sending telemetry requires you to create a connection to the node input and send
 ## Input reported properties
 Sending reported properties requires you to create a connection to the node input and send a node message in the following format:
 
-```json
+```
 {
     'topic': 'property',
     'payload': { 
@@ -51,7 +51,7 @@ Sending reported properties requires you to create a connection to the node inpu
 ```
 
 If your device is an IoT Central device you should use the following format:
-```json
+```
 {
     'topic': 'telemetry',
     'payload': { 
@@ -64,7 +64,7 @@ If your device is an IoT Central device you should use the following format:
 ## Input a command response
 Sending a command response requires you to create a connection to the node input and send a node message in the following format:
 
-```json
+```
 {
     'topic': 'response',
     'requestId': <request_id>,
@@ -82,7 +82,7 @@ The status property is the device-supplied status of method execution.
 ## Output property message
 When the node is deployed using Device Provisioning a node message in the following format will be received on the output, when the provisioning is successful:
 
-```json
+```
 {
     'topic':'provisioning',
     'deviceId':'<device_id>',
@@ -105,16 +105,16 @@ You can use this provisioning message to do some additional processing on the de
 ## Output provisioning message
 When you update the desired properties on a device twin in Azure, the node will send a node message to the output containing the updated desired properties:
 
-```json
-    {
-        'topic':'property',
-        'deviceId':'device_id',
-        'payload': {
-            '<property>': <value>,
-            ...
-            '$version': <version_number>
-        }
+```
+{
+    'topic':'property',
+    'deviceId':'device_id',
+    'payload': {
+        '<property>': <value>,
+        ...
+        '$version': <version_number>
     }
+}
 ```
 
 You can use this message to do additional processing on the device.
@@ -122,18 +122,18 @@ You can use this message to do additional processing on the device.
 ## Output command message
 When you send a direct method to the device from Azure, the node will send a node message to the output containing the command and its parameters:
 
-```json
-    {
-        'topic':'command',
-        'deviceId':'device_id',
-        'requestId': '<request_id>',
-        'methodName': '<method_name>',
-        'payload': {
-            '<paramter>': <value>,
-            ...
-         }
-    }
+```
+{
+    'topic':'command',
+    'deviceId':'device_id',
+    'requestId': '<request_id>',
+    'methodName': '<method_name>',
+    'payload': {
+        '<paramter>': <value>,
+        ...
+        }
+}
 ```
 
-You can use this message to do additional processing on the device. The Azure IoT Platform expects a response on a direct method. To send this response 
+You can use this message to do additional processing on the device. The Azure IoT Platform requires a response on a direct method. To send this response you can use the [Input a command response](./USE.md#input-a-command-response) approach. Make sure you use the same request_id, to ensure command and response correlation.
 
