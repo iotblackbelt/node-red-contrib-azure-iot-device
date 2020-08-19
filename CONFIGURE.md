@@ -1,20 +1,22 @@
 # Configure the Azure IoT Device Node
-In the document we describe how to configure the Node-RED Azure IoT Device node for first use.
+In this document we describe how to configure the Node-RED Azure IoT Device node for first use.
 
 ## Good to know
-The Azure IoT Device Node-RED node can be configured as an Azure IoT Device using multiple attestation methods and provisioning. In this document we will not explain the details of Azure IoT provisioning and attestation methods, but will explain what you need to use as node settings to enable them.<br/>
+The Azure IoT Device Node-RED node can be configured as an Azure IoT Device using multiple attestation methods and provisioning. In this document we will not explain the details of Azure IoT provisioning, attestation methods, and using X.509 certificates, but we will explain what you need to use as node settings to enable them.
 
->For more information on provsionig read:
->* Manual provisioning with [Azure IoT Hub](https://docs.microsoft.com/en-us/azure/iot-hub/)
+>For more information on the subjects above read:
+>* Manual provisioning with [Azure IoT Hub](https://docs.microsoft.com/en-us/azure/iot-hub/).
 >    * Using the Azure Portal, Azure CLI, Visual Studio Code, Powershell or the Azure IoT Services SDK.
->* Automated provisioning using [Azure IoT Device Provisioning Services](https://docs.microsoft.com/en-us/azure/iot-dps/)
+>* Automated provisioning using [Azure IoT Device Provisioning Services](https://docs.microsoft.com/en-us/azure/iot-dps/).
+>* [Device Authentication using X.509 CA Certificates](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-x509ca-overview).
 
 The Azure IoT Device node can either use a symmetric key or a X.509 certificate as the attestation mechanism. More information on using symmetric key or X.509 certificates can be found in the Azure IoT Hub and Device Provisioning Services documentation online.
 
 ## Create and configure an Azure IoT Device Node-RED node
-Once you installed Node-RED and the Azure IoT Device Node-RED node, run Node-RED and browse to the Node-RED website on your machine &lt;node-red-machine&gt;:1880.
+Once you installed Node-RED and the Azure IoT Device Node-RED node, run Node-RED and browse to the Node-RED website on your machine, f.i. &lt;node-red-machine&gt;:1880.
 In the nodes section on the left-hand side, scroll down to the bottom where you will find the Azure IoT Device node: 
-<div><img alt="Azure IoT Device node" style="align:left;float:none" src="images/node.png"/></div>
+
+![Azure IoT Device node](images/node.png)
 
 ### Steps to configure the node
 Like any other Node-RED node you can create an instance of this node by dragging it onto a flow. Once you've dragged it into the flow you have to configure the node as a specific Azure IoT device. In this section we will explain the different setting-tabs and how you can use them to define the behavior of the Azure IoT device.
@@ -75,4 +77,4 @@ The following table contains explanation of the fields and options on the **IoT 
 | X.509 Gateway CA Certificate | The IoT Edge X.509 CA certificate. This certificate will be used to enable encrypted and trusted communication between the device and the IoT Edge. The certificate can be uploaded. |
 
 ## Finalize
-Once you've configured the device, you ned to deploy the node in Node-RED. If the setup was correct, the device will connect to the Azure IoT platform. How to use the node can be found [here](./USE.md).
+Once you've configured the device, you need to deploy the node in Node-RED. If the setup was correct, the device will connect to the Azure IoT platform. In the debug window you can see whther the configuration was correct and the device was able to provision and connect to the Azure IoT platform. How to use the node can be found [here](./USE.md).

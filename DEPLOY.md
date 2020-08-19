@@ -29,3 +29,6 @@ This creates a symbolic link to your node module project directory in ~/.node-re
 
 ## Deploy the node using 'Manage palette'
 **TBD**: get node available in the the Node-RED repository.
+
+## Next step
+The next step is to [configure](./CONFIGURE.md) the node to represent a specific Azure IoT device.
