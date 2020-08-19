@@ -411,13 +411,6 @@
                     <option value="dps">Device provisioning service</option>
                 </select>
             </div>
-            <div class="form-row">
-                <label for="node-input-authenticationmethod"><i class="icon-tag"></i> <span>Authentication Method</span></label>
-                <select id="node-input-authenticationmethod">
-                    <option value="sas">Shared access signature (SAS)</option>
-                    <option value="x509">Certificates (X.509)</option>
-                </select>
-            </div>
             <div class="form-row iothub-row">
                 <label for="node-input-iothub"><i class="icon-tag"></i> <span>IoT Hub Hostname</span></label>
                 <input type="text" id="node-input-iothub" placeholder="%iothubname%.azure-devices.net">
@@ -437,11 +430,17 @@
                     <option value="device">Individual</option>
                 </select>
             </div>
+            <div class="form-row">
+                <label for="node-input-authenticationmethod"><i class="icon-tag"></i> <span>Authentication Method</span></label>
+                <select id="node-input-authenticationmethod">
+                    <option value="sas">Shared access signature (SAS)</option>
+                    <option value="x509">Certificates (X.509)</option>
+                </select>
+            </div>
             <div class="form-row sas-row">
                 <label for="node-input-saskey"><i class="icon-tag"></i> <span>SAS Key</span></label>
                 <input type="password" id="node-input-saskey" placeholder="%primairy or secundairy key%">
             </div>
-
             <div class="form-row x509-row">
                 <label for="node-input-x509certificate"><i class="fa fa-file-text-o"></i> <span>X.509 Certificate</span></label>
                 <span class="device-config-input-data">
