@@ -52,9 +52,9 @@ You need to use the Device Identity tab to define the device and the way it conn
 
 ##### Fields and options
 The following table contains explanation of the fields and options on the Device Indentity tab:
-| :--- | :--- | ---: |
 | Field | Description | Required |
 | --- | --- | --- |
+| :--- | :--- | ---: |
 | Device ID | This field wil contain the device Id of the Azure IoT device as it is/will be on IoT Hub or IoT Central | Yes |
 
 
