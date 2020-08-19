@@ -51,13 +51,13 @@ You need to use the Device Identity tab to define the device and the way it conn
 <div><img alt="Device identity tab" style="align:left;float:none" src="images/device-identity-tab-00.png"/></div>
 
 ##### Fields and options
-The following table contains explanation of the fields and options on the Device Indentity tab:
-| Field | Description | Required |
+The following table contains explanation of the fields and options on the Device Indentity tab. Some fileds will only be visible depending on selection choices made in other fields.
+| Field/option | Description | Depends on |
 | --- | --- | --- |
-| :--- | :--- | ---: |
-| Device ID | This field wil contain the device Id of the Azure IoT device as it is/will be on IoT Hub or IoT Central | Yes |
-
-
+| Device ID | This field wil contain the device Id of the Azure IoT device as it is/will be on IoT Hub or IoT Central. | - |
+| Connection Type | This option indicates whether the device will use a preset connection string or use [Device Provisioning Service](https://docs.microsoft.com/en-us/azure/iot-dps/). Depending on the option you select different fields will be shown to fill. | Yes |
+| Authentication Method | Azure IoT supports two authentication types, SAS token-based authentication and X.509 certificate authentication (individual and CA based) | - |
+| IoT Hub Hostname | The Azure IoT Hub Hostname '%iothubname%.azure-device.net'. The name can be found in the Azure portal on the overview page of the IoT Hub | Connection Type |
 
 ## Future plans for development
 It is my intention to add the following features to the Azure IoT Device Node-RED node:
