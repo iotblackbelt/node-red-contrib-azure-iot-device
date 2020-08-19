@@ -66,13 +66,15 @@ module.exports = function (RED) {
         node.isIotcentral = config.isIotcentral;
         node.scopeid = config.scopeid;
         node.saskey = config.saskey;
-        node.x509certificate = config.x509certificate;
-        node.x509key = config.x509key;
         node.protocol = config.protocol;
         node.methods = config.methods;
         node.information = config. information;
         node.gatewayHostname = config.gatewayHostname;
-        node.gatewayCertificate = config.gatewayCertificate;
+        if (this.credentials) {
+            node.cert = this.credentials.cert || '';
+            node.key = this.credentials.key || '';
+            node.ca = this.credentials.ca || '';
+        }
 
         // Create the Node-RED node
         RED.nodes.createNode(this, config);
@@ -116,8 +118,8 @@ module.exports = function (RED) {
             }
         } else if (node.authenticationmethod === "x509") {
             options = {
-                cert : fs.readFileSync(node.x509certificate, 'utf-8'),
-                key : fs.readFileSync(node.x509key, 'utf-8')
+                cert : node.cert,
+                key : node.key
             };
         };
         
@@ -170,8 +172,8 @@ module.exports = function (RED) {
         if (node.gatewayHostname !== "") {
             node.log(node.deviceid + ' -> Connect through gateway: ' + node.gatewayHostname);
             try {
-                options.ca = fs.readFileSync(node.gatewayCertificate, 'utf-8').toString();
-                process.env.NODE_EXTRA_CA_CERTS = node.gatewayCertificate;
+                options.ca = node.ca;
+                process.env.NODE_EXTRA_CA_CERTS = node.ca;
                 connectionString = 'HostName=' + node.gatewayHostname + ';DeviceId=' + node.deviceid +
                  ((node.authenticationmethod == 'sas') ? (';SharedAccessKey=' + node.saskey) : ';x509=true');
             } catch (err){
@@ -212,7 +214,7 @@ module.exports = function (RED) {
                         msg.payload = JSON.parse(JSON.stringify(twin.properties));
                         node.send(msg);
                         deviceTwin = twin;
-                        // Send the device information properties
+                        // Set the device information properties
                         if (node.information) {
                             node.log(node.deviceid + ' -> Sending device information.');
                             var information = {};
@@ -223,12 +225,20 @@ module.exports = function (RED) {
                                     twinValue = JSON.parse(node.information[property].value);
                                 }
                                 catch (err) { 
-                                    // do nothing
+                                    // do nothing, it is not JSON just text/value
                                 }
                                 finally {
+                                    // Set the new device information values
                                     information[node.information[property].name] =  {value: twinValue};
                                 };
                             };
+                            // Clean up any property that was deleted
+                            for (let item in deviceTwin.properties.reported) {
+                                if (!item.includes("$") && (item !== "update") && !information[item]) {
+                                    information[item] =  null;
+                                }
+                            }
+                            // Send the device information
                             sendDeviceProperties(node, twin, information);
                         }
 
@@ -408,13 +418,19 @@ module.exports = function (RED) {
             isIotcentral: {value: false},
             scopeid: {value: ""},
             saskey: {value: ""},
-            x509certificate: {value: ""},
+            certname: {value: ""},
+            keyname: {value: ""},
             protocol: {value: ""},
             methods: {value: []},
             information: {value: []},
             isDownstream: {value: false},
             gatewayHostname: {value: ""},
-            gatewayCertificate: {value:""}
+            caname: {value:""}
+        },
+        credentials: {
+            cert: {type:"text"},
+            key: {type:"text"},
+            ca: {type:"text"}
         }
     });
 

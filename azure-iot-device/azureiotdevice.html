@@ -11,13 +11,18 @@
             scopeid: {value: "", required:false},
             enrollmenttype: {value: "", required:false},
             saskey: {value: "", required:false},
-            x509certificate: {value: "", required:false},
-            x509key: {value: "", required:false},
+            certname: {value:""},
+            keyname: {value:""},
             protocol: {value: "", required:true},
             methods: {value: []},
             information: {value: []},
             gatewayHostname: {value:"", required: false},
-            gatewayCertificate: {value:"", required: false}
+            caname: {value:""}
+        },
+        credentials: {
+            cert: {type:"text", value: "", required:false},
+            key: {type:"text", value: "", required:false},
+            ca: {type:"text", value:"", required: false}
         },
         inputs:1,
         outputs:1,
@@ -31,34 +36,50 @@
         oneditprepare: function() {
             let node = this;
 
-            // Local files for certificates
-            function updateFileUpload() {
-                if ($("#node-config-input-uselocalfiles").is(':checked')) {
-                    $(".device-config-input-path").show();
-                    $(".device-config-input-data").hide();
-                } else {
-                    $(".device-config-input-data").show();
-                    $(".device-config-input-path").hide();
+            // Save the uploaded file
+            function saveFile(property, file) {
+                var dataInputId = "#node-input-"+property;
+                var filenameInputId = "#node-input-"+property+"name";
+                var filename = file.name;
+                var reader = new FileReader();
+                reader.onload = function(event) {
+                    $("#device-config-"+property+"name").text(filename);
+                    $(filenameInputId).val(filename);
+                    $(dataInputId).val(event.target.result);
                 }
+                reader.readAsText(file,"UTF-8");
             }
-            $("#node-config-input-uselocalfiles").on("click",function() {
-                updateFileUpload();
+
+            $("#node-input-certfile" ).on("change", function() {
+                saveFile("cert", this.files[0]);
+            });
+            $("#node-input-keyfile" ).on("change", function() {
+                saveFile("key", this.files[0]);
+            });
+            $("#node-input-cafile" ).on("change", function() {
+                saveFile("ca", this.files[0]);
             });
 
-            // Local files for gateway certificates
-            function updateGatewayFileUpload() {
-                if ($("#node-config-input-gateway-uselocalfiles").is(':checked')) {
-                    $(".device-config-input-gateway-path").show();
-                    $(".device-config-input-gateway-data").hide();
-                } else {
-                    $(".device-config-input-gateway-data").show();
-                    $(".device-config-input-gateway-path").hide();
-                }
-            }
-            $("#node-config-input-gateway-uselocalfiles").on("click",function() {
-                updateFileUpload();
-            });
+            $("#device-config-certname").text(this.certname);
+            $("#device-config-keyname").text(this.keyname);
+            $("#device-config-caname").text(this.caname);
 
+            // Clear certificate files
+            function clearNameData(prop) {
+                $("#device-config-"+prop+"name").text("");
+                $("#node-input-"+prop).val("");
+                $("#node-input-"+prop+"name").val("");
+            }
+            $("#device-config-button-cert-clear").on("click", function() {
+                clearNameData("cert");
+            });
+            $("#device-config-button-key-clear").on("click", function() {
+                clearNameData("key");
+            });
+            $("#device-config-button-ca-clear").on("click", function() {
+                clearNameData("ca");
+            });
+            
             // Enable tabbed interaction
             let tabs = RED.tabs.create({
             id: "node-input-device-tabs",
@@ -420,29 +441,28 @@
                 <label for="node-input-saskey"><i class="icon-tag"></i> <span>SAS Key</span></label>
                 <input type="password" id="node-input-saskey" placeholder="%primairy or secundairy key%">
             </div>
-            <div class="form-row x509-row" class="hide" id="node-config-row-uselocalfiles">
-                <input type="checkbox" id="node-config-input-uselocalfiles" style="display: inline-block; width: auto; vertical-align: top;">
-                <label for="node-config-input-uselocalfiles" style="width: 70%;">Use local files?</label>
-            </div>
+
             <div class="form-row x509-row">
                 <label for="node-input-x509certificate"><i class="fa fa-file-text-o"></i> <span>X.509 Certificate</span></label>
                 <span class="device-config-input-data">
-                    <label class="red-ui-button" for="node-config-input-certfile"><i class="fa fa-upload"></i> <span>Upload</span></label>
-                    <input class="hide" type="file" id="node-config-input-certfile">
+                    <label class="red-ui-button" for="node-input-certfile"><i class="fa fa-upload"></i> <span>Upload</span></label>
+                    <input class="hide" type="file" id="node-input-certfile">
                     <span id="device-config-certname" style="width: calc(100% - 280px); overflow: hidden; line-height:34px; height:34px; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle;"> </span>
                     <button class="red-ui-button red-ui-button-small" id="device-config-button-cert-clear" style="margin-left: 10px"><i class="fa fa-times"></i></button>
                 </span>
-                <input class="hide device-config-input-path" type="text" id="node-input-x509certificate" placeholder="%X509 certificate file%"/>
+                <input type="hidden" id="node-input-certname">
+                <input type="hidden" id="node-input-cert">
             </div>
             <div class="form-row x509-row">
                 <label for="node-input-x509key"><i class="fa fa-file-text-o"></i> <span>X.509 Key</span></label>
                 <span class="device-config-input-data">
-                    <label class="red-ui-button" for="node-config-input-keyfile"><i class="fa fa-upload"></i> <span>Upload</span></label>
-                    <input class="hide" type="file" id="node-config-input-keyfile">
+                    <label class="red-ui-button" for="node-input-keyfile"><i class="fa fa-upload"></i> <span>Upload</span></label>
+                    <input class="hide" type="file" id="node-input-keyfile">
                     <span id="device-config-keyname" style="width: calc(100% - 280px); overflow: hidden; line-height:34px; height:34px; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle;"> </span>
                     <button class="red-ui-button red-ui-button-small" id="device-config-button-key-clear" style="margin-left: 10px"><i class="fa fa-times"></i></button>
                 </span>
-                <input class="hide device-config-input-path" type="text" id="node-input-x509key" placeholder="%X509 key file%"/>
+                <input type="hidden" id="node-input-keyname">
+                <input type="hidden" id="node-input-key">
             </div>
             <div class="form-row">
                 <label for="node-input-protocol"><i class="icon-tag"></i> <span>Protocol</span></label>
@@ -483,25 +503,20 @@
             </div>
         </div>
         <div id="compact-device-tab-iotedge" style="display:none">
-            <div class="form-row x509-row" class="hide" id="node-config-row-gateway-uselocalfiles">
-                <input type="checkbox" id="node-config-input-gateway-uselocalfiles" style="display: inline-block; width: auto; vertical-align: top;">
-                <label for="node-config-input-gateway-uselocalfiles" style="width: 70%;">Use local files?</label>
-            </div>
             <div class="form-row">
                 <label for="node-input-gatewayHostname"><i class="icon-tag"></i> <span>Hostname</span></label>
                 <input type="text" id="node-input-gatewayHostname" placeholder="%IoT Edge Hostname%">
-                <label for="node-input-gatewayCertificate"><i class="fa fa-file-text-o"></i> <span>Gateway Certificate</span></label>
-                <input type="text" id="node-input-gatewayCertificate" placeholder="%IoT Edge X.509 Certificate%">
             </div>
-            <div class="form-row x509-row">
-                <label for="node-input-gatewayCertificate"><i class="fa fa-file-text-o"></i> <span>X.509 Gateway CA Certificate</span></label>
-                <span class="device-config-input-gateway-data">
-                    <label class="red-ui-button" for="node-config-input-certfile"><i class="fa fa-upload"></i> <span>Upload</span></label>
-                    <input class="hide" type="file" id="node-config-input-gatewayCertfile">
-                    <span id="device-config-gatewayCertname" style="width: calc(100% - 280px); overflow: hidden; line-height:34px; height:34px; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle;"> </span>
-                    <button class="red-ui-button red-ui-button-small" id="device-config-button-gatewaycert-clear" style="margin-left: 10px"><i class="fa fa-times"></i></button>
+            <div class="form-row">
+                <label for="node-input-cafile"><i class="fa fa-file-text-o"></i> <span>X.509 Gateway CA Certificate</span></label>
+                <span class="device-config-input-data">
+                    <label class="red-ui-button" for="node-input-cafile"><i class="fa fa-upload"></i> <span>Upload</span></label>
+                    <input class="hide" type="file" id="node-input-cafile">
+                    <span id="device-config-caname" style="width: calc(100% - 280px); overflow: hidden; line-height:34px; height:34px; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle;"> </span>
+                    <button class="red-ui-button red-ui-button-small" id="device-config-button-ca-clear" style="margin-left: 10px"><i class="fa fa-times"></i></button>
                 </span>
-                <input class="hide device-config-input-gateway-path" type="text" id="node-input-gatewayCertificate" placeholder="%X509 certificate file%"/>
+                <input type="hidden" id="node-input-caname">
+                <input type="hidden" id="node-input-ca">
             </div>
         </div>
     </div>
