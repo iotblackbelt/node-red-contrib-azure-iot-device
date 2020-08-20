@@ -158,7 +158,7 @@ The request_id is provided by the received direct method, and will need to be re
 The status property is the device-supplied status of method execution. 
 
 ## Example flow
-Here is an example flow that implements all input topics and an automated response to a direct method. You only have to [configure](./CONFIGURE.md) your node to represent a device. Once you've configured the node and depolyed the flow, the telemetry will be send every 5 seconds and the reported properties can be send clicking the **Trigger reported properties**.
+Here is an example flow that implements all input topics and an automated response to a direct method. You only have to [configure](./CONFIGURE.md) your node to represent a device. Once you've configured the node and deployed the flow, the telemetry will be send every 5 seconds and the reported properties can be send by clicking the **Trigger reported properties**.
 
 ![Azure IoT Device node example](images/example-flow.png)
 
