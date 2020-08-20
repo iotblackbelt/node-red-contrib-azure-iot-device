@@ -11,7 +11,12 @@ The node can be manually deployed using the Github repository code and 'npm inst
 
 Steps to install this node:
 
-1. Clone this repository to a local directory on your machine runing Node-RED: <code>git clone https://github.com/iotblackbelt/node-red-contrib-azure-iot-device.git</code>
+1. Clone this repository to a local directory on your machine running Node-RED:
+
+    ```
+    git clone https://github.com/iotblackbelt/node-red-contrib-azure-iot-device.git
+    ```
+    
 1. In your Node-RED user directory, typically ~/.node-red, run:
 
     ```
