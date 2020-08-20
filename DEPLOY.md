@@ -2,7 +2,9 @@
 In the document we describe how to deploy the Node-RED Azure IoT Device node.
 
 ## Prerequisites
-Node-RED and Git need to be installed on your machine to run this node and use the manual setup approach.
+- Node-RED needs to be installed on your machine to use this node 
+- Git needs to be installed for the manual setup approach.
+- NPM needs to be installed
 
 ## Manually deploy the node to your Node-RED instance
 The node can be manually deployed using the Github repository code and 'npm install &lt;folder&gt;' command. How to get started with Node-RED can be found here: https://nodered.org/docs/getting-started/.
@@ -34,7 +36,7 @@ This creates a symbolic link to your node module project directory in ~/.node-re
 
 >Note : npm will automatically add an entry for your module in the package.json file located in your user directory. If you don't want it to do this, use the --no-save option to the npm install command.
 
-## Deploy the node using 'Manage palette'
+## Deploy the node using npm
 **TBD**: get node available in the the Node-RED repository and on npm.
 
 ## Next step

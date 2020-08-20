@@ -3,7 +3,7 @@ The Azure IoT Device Node-RED node is a node that can be used to connect Node-RE
 
 The Azure IoT Device node represents a **single device** on the Azure IoT platform. 
 
-> NB: It is our assumption that you have knowledge of [Node-RED](https://nodered.org/) and the [Azure IoT platform](https://azure.microsoft.com/en-us/product-categories/iot/).
+> NB: It is our assumption that you have a basic understanding of [Node-RED](https://nodered.org/) and the [Azure IoT platform](https://azure.microsoft.com/en-us/product-categories/iot/).
 
 ## Deploy the Azure Device node
 In the [deploy](./DEPLOY.md) document we describe how to deploy the node to Node-RED.
