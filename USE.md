@@ -9,7 +9,7 @@ The Azure Device node can be used for:
 - updating reported properties
 - receiving C2D messages
 
-Each interaction will be descrbide in detail in the next sections. The node has a single input and a single output. The node determines the actions to take, based on the topic of Node-RED message.
+Each interaction will be described in detail in the next sections. The node has a single input and a single output. The node determines the actions to take, based on the topic of Node-RED message.
 
 ## Output topics
 The following output topics are supported:
@@ -39,7 +39,7 @@ When the node is deployed using Device Provisioning a node message in the follow
 }
 ```
 
-You can use this provisioning message to do some additional processing on the device side. If you use [custom allocation policies](https://docs.microsoft.com/en-us/azure/iot-dps/how-to-use-custom-allocation-policies) you can return a [payload to the device](https://docs.microsoft.com/en-us/azure/iot-dps/how-to-send-additional-data) that can be used for processing.
+You can use this provisioning message to do additional processing on the device side. If you use [custom allocation policies](https://docs.microsoft.com/en-us/azure/iot-dps/how-to-use-custom-allocation-policies) you can return a [payload to the device](https://docs.microsoft.com/en-us/azure/iot-dps/how-to-send-additional-data) that can be used for processing.
 
 ### Output property message
 When you update the desired properties on a device twin in Azure, the node will send a node message to the output containing the updated desired properties:
@@ -74,7 +74,8 @@ When you send a direct method to the device from Azure, the node will send a nod
 }
 ```
 
-You can use this message to do additional processing on the device. The Azure IoT Platform requires a response on a direct method. To send this response you can use the [Input a command response](./USE.md#input-a-command-response) approach. Make sure you use the same request_id, to ensure command and response correlation.
+You can use this message to do additional processing on the device.
+> The Azure IoT Platform requires a response on a direct method. To send this response you can use the [Input a command response](./USE.md#input-a-command-response). Make sure you use the same request_id, to ensure command and response correlation.
 
 ### Output C2D message
 When you send a C2D message to the device from Azure, the node will send a node message to the output containing the message and its parameters:
@@ -154,7 +155,7 @@ Sending a command response requires you to create a connection to the node input
 }
 ```
 
-The request_id is provided by the received direct method, and will need to be returned to the Azure IoT platform to establish the connection between command and response.
+The request_id is provided by the received direct method, and will need to be returned to the Azure IoT Device node to establish the connection between command and response.
 The status property is the device-supplied status of method execution. 
 
 ## Example flow
