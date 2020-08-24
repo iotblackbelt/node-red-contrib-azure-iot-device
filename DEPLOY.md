@@ -37,7 +37,9 @@ Steps to install this node:
     npm install <Windows Directory>\node-red-contrib-azure-iot-device
     ```
 
-This creates a symbolic link to your node module project directory in ~/.node-red/node_modules so that Node-RED will discover the node when it starts. Any changes to the node’s file can be picked up by simply restarting Node-RED. On Windows, use npm 5.x or greater.<br/>
+    This creates a symbolic link to your node module project directory in ~/.node-red/node_modules so that Node-RED will discover the node when it starts. Any changes to the node’s file can be picked up by simply restarting Node-RED. On Windows, use npm 5.x or greater.
+
+1. Restart Node-RED. The Azure IoT Device node will be available in the Azure IoT nodes section.
 
 >Note : npm will automatically add an entry for your module in the package.json file located in your user directory. If you don't want it to do this, use the --no-save option to the npm install command.
 

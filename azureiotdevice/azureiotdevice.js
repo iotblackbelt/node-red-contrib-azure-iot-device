@@ -61,7 +61,6 @@ module.exports = function (RED) {
         // Store node for further use
         var node = this;
         node.deviceid = config.deviceid;
-        node.moduleid =  config.modelid;
         node.connectiontype = config.connectiontype;
         node.authenticationmethod = config.authenticationmethod;
         node.enrollmenttype = config.enrollmenttype;
@@ -168,19 +167,22 @@ module.exports = function (RED) {
     // Initiate an IoT device node in node-red
     function initiateClient(node, options, deviceProtocol){
         // Set the client connection string and options
-        var connectionString = 'HostName=' + node.iothub + ';DeviceId=' + node.deviceid +
-            ((node.authenticationmethod == 'sas') ? (';SharedAccessKey=' + node.saskey) : ';x509=true');
+        var connectionString = ';DeviceId=' + node.deviceid;
+        // Finalize the connection string
+        connectionString = connectionString + ((node.authenticationmethod == 'sas') ? (';SharedAccessKey=' + node.saskey) : ';x509=true');
         if (node.gatewayHostname !== "") {
             node.log(node.deviceid + ' -> Connect through gateway: ' + node.gatewayHostname);
             try {
                 options.ca = node.ca;
                 process.env.NODE_EXTRA_CA_CERTS = node.ca;
-                connectionString = 'HostName=' + node.gatewayHostname + ';DeviceId=' + node.deviceid +
-                 ((node.authenticationmethod == 'sas') ? (';SharedAccessKey=' + node.saskey) : ';x509=true');
+                connectionString = 'HostName=' + node.gatewayHostname + connectionString;
             } catch (err){
                 node.error(node.deviceid + ' -> Certificate file error: ' + err);
                 setStatus(node, statusEnum.error);
             };
+        }
+        else {
+            connectionString = 'HostName=' + node.iothub + connectionString;
         }
 
         // Define the client
@@ -405,7 +407,7 @@ module.exports = function (RED) {
                         return methodResponse.response;
                     }
                     else {
-                        throw new Error(node.deviceid + ' -> Module Method Response not initiated..');
+                        throw new Error(node.deviceid + ' -> Method Response not initiated..');
                     }
                 })
                 .catch(function rejectDelay(reason) {
@@ -441,7 +443,6 @@ module.exports = function (RED) {
     RED.nodes.registerType("azureiotdevice", AzureIoTDevice, {
         defaults: {
             deviceid: {value: ""},
-            moduleid: {value: ""},
             connectiontype: {value: ""},
             authenticationmethod: {value: ""},
             enrollmenttype: {value: ""},
