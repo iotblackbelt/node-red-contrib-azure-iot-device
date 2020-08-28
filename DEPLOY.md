@@ -44,7 +44,17 @@ Steps to install this node:
 >Note : npm will automatically add an entry for your module in the package.json file located in your user directory. If you don't want it to do this, use the --no-save option to the npm install command.
 
 ## Deploy the node using npm
-**TBD**: get node available in the the Node-RED repository and on npm.
+Run command on Node-RED installation directory.
+
+```
+npm install node-red-contrib-azure-iot-device
+```
+
+or run command for global installation.
+
+```
+npm install -g node-red-contrib-azure-iot-device
+```
 
 ## Next step
 The next step is to [configure](./CONFIGURE.md) the node to represent a specific Azure IoT device.
