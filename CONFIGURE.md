@@ -71,8 +71,9 @@ The **Iot Edge Gateway** tab enables you to setup your device as a downstream de
 
 ##### Fields
 The following table contains explanation of the fields and options on the **IoT Edge Gateway** tab.
+
 | Field | Description |
-| --- | --- | --- |
+| --- | --- |
 | Hostname | This field will contain the IoT Edge hostname. The hostname identifies a specific IoT Edge. |
 | X.509 Gateway CA Certificate | The IoT Edge X.509 CA certificate. This certificate will be used to enable encrypted and trusted communication between the device and the IoT Edge. The certificate can be uploaded. |
 
