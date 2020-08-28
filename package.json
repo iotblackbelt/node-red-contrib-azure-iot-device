@@ -2,7 +2,6 @@
   "name": "node-red-contrib-azure-iot-device",
   "description": "Node-RED node to connect to the Azure IoT platform as a device.",
   "version": "0.1.0",
-  "publishConfig": { "registry": "https://npm.pkg.github.com/" },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/iotblackbelt/node-red-contrib-azure-iot-device.git"
