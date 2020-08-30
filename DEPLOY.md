@@ -58,9 +58,9 @@ npm install -g node-red-contrib-azure-iot-device
 
 ## Install in Node-Red by managing the palette
 
-Node-RED lets users manage their pallete and install and unstall nodes.
+Node-RED lets users manage their pallete by installing, removing, disabling or upgrading modules.
 
-In Node-RED, open the menu and select 'Manage Pallete'. In the new window, select the 'Install' tab. Search for the module by typing in 'azure-iot-edge' in 'search modules'. The 'node-red-contrib-azure-iot-device' node will appear in the list. Select 'Install'.
+In Node-RED, open the menu and select 'Manage Pallete'. In the new window, select the 'Install' tab. Search for the module by typing in 'azure-iot-edge' in 'search modules'. The 'node-red-contrib-azure-iot-device' module will appear in the list. Select 'Install'. Confirm the installation.
 
 Once installed, the 'Device' node can be found in the section named 'Azure IoT'.
 
