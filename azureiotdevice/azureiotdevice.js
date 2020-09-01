@@ -232,7 +232,7 @@ module.exports = function (RED) {
                                 }
                                 finally {
                                     // Set the new device information values
-                                    information[node.information[property].name] =  {value: twinValue};
+                                    information[node.information[property].name] = twinValue;
                                 };
                             };
                             // Clean up any property that was deleted
