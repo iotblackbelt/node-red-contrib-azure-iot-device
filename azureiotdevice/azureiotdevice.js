@@ -72,11 +72,9 @@ module.exports = function (RED) {
         node.methods = config.methods;
         node.information = config. information;
         node.gatewayHostname = config.gatewayHostname;
-        if (this.credentials) {
-            node.cert = this.credentials.cert || '';
-            node.key = this.credentials.key || '';
-            node.ca = this.credentials.ca || '';
-        }
+        node.cert = config.cert;
+        node.key = config.key;
+        node.ca = config.ca;
 
         // Create the Node-RED node
         RED.nodes.createNode(this, config);
@@ -167,7 +165,7 @@ module.exports = function (RED) {
     // Initiate an IoT device node in node-red
     function initiateClient(node, options, deviceProtocol){
         // Set the client connection string and options
-        var connectionString = ';DeviceId=' + node.deviceid;
+        var connectionString = 'HostName=' + node.iothub + ';DeviceId=' + node.deviceid;
         // Finalize the connection string
         connectionString = connectionString + ((node.authenticationmethod == 'sas') ? (';SharedAccessKey=' + node.saskey) : ';x509=true');
         if (node.gatewayHostname !== "") {
@@ -175,14 +173,11 @@ module.exports = function (RED) {
             try {
                 options.ca = node.ca;
                 process.env.NODE_EXTRA_CA_CERTS = node.ca;
-                connectionString = 'HostName=' + node.gatewayHostname + connectionString;
+                connectionString = connectionString + ';GatewayHostName=' + node.gatewayHostname ;
             } catch (err){
                 node.error(node.deviceid + ' -> Certificate file error: ' + err);
                 setStatus(node, statusEnum.error);
             };
-        }
-        else {
-            connectionString = 'HostName=' + node.iothub + connectionString;
         }
 
         // Define the client
@@ -457,9 +452,7 @@ module.exports = function (RED) {
             information: {value: []},
             isDownstream: {value: false},
             gatewayHostname: {value: ""},
-            caname: {value:""}
-        },
-        credentials: {
+            caname: {value:""},
             cert: {type:"text"},
             key: {type:"text"},
             ca: {type:"text"}

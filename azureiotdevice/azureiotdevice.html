@@ -17,9 +17,7 @@
             methods: {value: []},
             information: {value: []},
             gatewayHostname: {value:"", required: false},
-            caname: {value:""}
-        },
-        credentials: {
+            caname: {value:""},
             cert: {type:"text", value: "", required:false},
             key: {type:"text", value: "", required:false},
             ca: {type:"text", value:"", required: false}
@@ -47,7 +45,7 @@
                     $(filenameInputId).val(filename);
                     $(dataInputId).val(event.target.result);
                 }
-                reader.readAsText(file,"UTF-8");
+                reader.readAsText(file,'utf-8');
             }
 
             $("#node-input-certfile" ).on("change", function() {
