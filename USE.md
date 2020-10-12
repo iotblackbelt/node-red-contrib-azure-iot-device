@@ -103,7 +103,7 @@ The following input topics are supported:
 
 
 ### Input telemetry
-Sending telemetry requires you to create a connection to the node input and send a node message in the following format:
+Sending telemetry, including (optional) properties, requires you to create a connection to the node input and send a node message in the following format:
 
 ```
 {
@@ -111,9 +111,14 @@ Sending telemetry requires you to create a connection to the node input and send
     'payload': { 
         '<name>': '<value>',
         ...
-    }
+    },
+    'properties': [                                           
+       {'key' :'<key>', 'value' : '<value>'},
+       ...
+    ]
 }
 ```
+
 
 ### Input reported properties
 Sending reported properties requires you to create a connection to the node input and send a node message in the following format:
@@ -123,17 +128,6 @@ Sending reported properties requires you to create a connection to the node inpu
     'topic': 'property',
     'payload': { 
         '<name>': <value>,
-        ...
-    }
-}
-```
-
-If your device is an IoT Central device you should use the following format:
-```
-{
-    'topic': 'telemetry',
-    'payload': { 
-        '<name>': {'value': <value>},
         ...
     }
 }

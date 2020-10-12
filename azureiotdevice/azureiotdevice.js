@@ -1,8 +1,36 @@
 
 // Copyright (c) Eric van Uum. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
+'use strict'
 
-const { config } = require('process');
+var Client = require('azure-iot-device').Client;
+var Message = require('azure-iot-device').Message;
+
+// Only AMQP(WS) or MQTT(WS) used as protocol, no HTTP support
+var Protocols = {
+    amqp: require('azure-iot-device-amqp').Amqp,
+    amqpWs: require('azure-iot-device-amqp').AmqpWs,
+    mqtt: require('azure-iot-device-mqtt').Mqtt,
+    mqttWs: require('azure-iot-device-mqtt').MqttWs
+};
+
+// Only AMQP(WS) or MQTT(WS) used as protocol, no HTTP support
+var ProvisioningProtocols = {
+    amqp: require('azure-iot-provisioning-device-amqp').Amqp,
+    amqpWs: require('azure-iot-provisioning-device-amqp').AmqpWs,
+    mqtt: require('azure-iot-provisioning-device-mqtt').Mqtt,
+    mqttWs: require('azure-iot-provisioning-device-mqtt').MqttWs
+};
+
+var SecurityClient = {
+    x509: require('azure-iot-security-x509').X509Security,
+    sas: require('azure-iot-security-symmetric-key').SymmetricKeySecurityClient
+};
+
+var ProvisioningDeviceClient = require('azure-iot-provisioning-device').ProvisioningDeviceClient;
+var GlobalProvisoningEndpoint = "global.azure-devices-provisioning.net";
+
+var crypto = require('crypto');
 
 /**
  * The "azure-iot-device" node enables you to represent an Azure IoT Device in Node-Red.
@@ -12,40 +40,9 @@ const { config } = require('process');
  * The device node enables D2C, C2D messages, Direct Methods, Desired and Reported properties.
  * You can connect to IoT Edge as a downstream device, IoT Hub and IoT Central.
  */
-
 module.exports = function (RED) {
-    'use strict'
 
-    var fs = require('fs');
-
-    var Client = require('azure-iot-device').Client;
-    var Message = require('azure-iot-device').Message;
-
-    // Only AMQP(WS) or MQTT(WS) used as protocol, no HTTP support
-    var Protocols = {
-        amqp: require('azure-iot-device-amqp').Amqp,
-        amqpWs: require('azure-iot-device-amqp').AmqpWs,
-        mqtt: require('azure-iot-device-mqtt').Mqtt,
-        mqttWs: require('azure-iot-device-mqtt').MqttWs
-    };
-
-    // Only AMQP(WS) or MQTT(WS) used as protocol, no HTTP support
-    var ProvisioningProtocols = {
-        amqp: require('azure-iot-provisioning-device-amqp').Amqp,
-        amqpWs: require('azure-iot-provisioning-device-amqp').AmqpWs,
-        mqtt: require('azure-iot-provisioning-device-mqtt').Mqtt,
-        mqttWs: require('azure-iot-provisioning-device-mqtt').MqttWs
-    };
-
-    var SecurityClient = {
-        x509: require('azure-iot-security-x509').X509Security,
-        sas: require('azure-iot-security-symmetric-key').SymmetricKeySecurityClient
-    };
-
-    var ProvisioningDeviceClient = require('azure-iot-provisioning-device').ProvisioningDeviceClient;
-    var GlobalProvisoningEndpoint = "global.azure-devices-provisioning.net";
-
-    var crypto = require('crypto');
+    const { config } = require('process');
 
     var statusEnum = {
         connected: { fill: "green", shape:"dot", text: "Connected" },
@@ -77,9 +74,9 @@ module.exports = function (RED) {
         node.ca = config.ca;
 
         // Create the Node-RED node
-        RED.nodes.createNode(this, config);
+        RED.nodes.createNode(node, config);
         setStatus(node, statusEnum.disconnected);
-      
+
         // Create the device
         initiateDeviceSettings(node);
     };
@@ -172,8 +169,7 @@ module.exports = function (RED) {
             node.log(node.deviceid + ' -> Connect through gateway: ' + node.gatewayHostname);
             try {
                 options.ca = node.ca;
-                process.env.NODE_EXTRA_CA_CERTS = node.ca;
-                connectionString = connectionString + ';GatewayHostName=' + node.gatewayHostname ;
+                connectionString = connectionString + ';GatewayHostName=' + node.gatewayHostname;
             } catch (err){
                 node.error(node.deviceid + ' -> Certificate file error: ' + err);
                 setStatus(node, statusEnum.error);
@@ -183,176 +179,207 @@ module.exports = function (RED) {
         // Define the client
         node.log(node.deviceid + ' -> Connection string: ' + connectionString);
         var client = Client.fromConnectionString(connectionString, deviceProtocol);
-        client.setOptions(options);
-        client.on('error', function (err) {
-            node.error(node.deviceid + ' -> Device Client error: ' + err);
-            setStatus(node, statusEnum.error);
+        var deviceTwin;
+
+        // Ensure resources are reset
+        node.on('close', function(done) {
+            try {
+                deviceTwin.removeAllListeners();
+                deviceTwin = null;
+            } catch (err) {
+                deviceTwin = null;
+            }
+            try {
+                client.removeAllListeners();
+                client.close((err,result) => {
+                    if (err) {
+                        node.log(node.deviceid + ' -> Azure IoT Device Client close failed: ' + JSON.stringify(err));
+                    } else {
+                        node.log(node.deviceid + ' -> Azure IoT Device Client closed.');
+                    }
+                    done();
+                });
+                client = null;
+            } catch (err) {
+                client = null;
+            }
+            options = null;
         });
-        client.open(function(err) {
+
+        client.setOptions(options, function(err) {
             if (err) {
-                node.error(node.deviceid + ' -> Device client open error: ' + err);
+                node.error(node.deviceid + ' -> Client SetOptions Error: ' + err);
                 setStatus(node, statusEnum.error);
             } else {
-                node.log(node.deviceid + ' -> Device client connected.');
-                setStatus(node, statusEnum.connected);
-
-                var deviceTwin;
-
-                // Get the device twin 
-                client.getTwin(function(err, twin) {
+                client.on('error', function (err) {
+                    node.error(node.deviceid + ' -> Device Client error: ' + err);
+                    setStatus(node, statusEnum.error);
+                });
+                client.open(function(err) {
                     if (err) {
-                        node.error(node.deviceid + ' -> Could not get the device twin: ' + err);
+                        node.error(node.deviceid + ' -> Device client open error: ' + err);
+                        setStatus(node, statusEnum.error);
                     } else {
-                        node.log(node.deviceid + ' -> Device twin created.');
-                        node.log(node.deviceid + ' -> Twin contents: ' + JSON.stringify(twin.properties));
-                        // Send the twin properties to Node Red
-                        var msg = {};
-                        msg.topic = 'property';
-                        msg.deviceId = node.deviceid;
-                        msg.payload = JSON.parse(JSON.stringify(twin.properties));
-                        node.send(msg);
-                        deviceTwin = twin;
-                        // Set the device information properties
-                        if (node.information) {
-                            node.log(node.deviceid + ' -> Sending device information.');
-                            var information = {};
-                            // Check is value is JSON, if so parse it
-                            for (let property in node.information) {
-                                var twinValue = node.information[property].value;
-                                try {
-                                    twinValue = JSON.parse(node.information[property].value);
-                                }
-                                catch (err) { 
-                                    // do nothing, it is not JSON just text/value
-                                }
-                                finally {
-                                    // Set the new device information values
-                                    information[node.information[property].name] = twinValue;
-                                };
-                            };
-                            // Clean up any property that was deleted
-                            for (let item in deviceTwin.properties.reported) {
-                                if (!item.includes("$") && (item !== "update") && !information[item]) {
-                                    information[item] =  null;
-                                }
-                            }
-                            // Send the device information
-                            sendDeviceProperties(node, twin, information);
-                        }
+                        node.log(node.deviceid + ' -> Device client connected.');
+                        setStatus(node, statusEnum.connected);
 
-                        // Get the desired properties
-                        twin.on('properties.desired', function(payload) {
-                            node.log(node.deviceid + ' -> Desired properties received: ' + JSON.stringify(payload));
-                            var msg = {};
-                            msg.topic = 'property';
-                            msg.deviceId = node.deviceid;
-                            msg.payload = payload;
-                            node.send(msg);
-                            // Report back received desired properties ** Only for IoT Central Devices **
-                            if (node.isIotcentral) {
-                                for (let setting in payload){
-                                    if (setting.indexOf('$') === -1) {
-                                        var patch = {
-                                            [setting]: {
-                                                value: payload[setting].value,
-                                                status: 'completed',
-                                                desiredVersion: payload.$version,
-                                                message: 'Node-Red Azure IoT Device'
+                        // Get the device twin 
+                        client.getTwin(function(err, twin) {
+                            if (err) {
+                                node.error(node.deviceid + ' -> Could not get the device twin: ' + err);
+                            } else {
+                                node.log(node.deviceid + ' -> Device twin created.');
+                                node.log(node.deviceid + ' -> Twin contents: ' + JSON.stringify(twin.properties));
+                                // Send the twin properties to Node Red
+                                var msg = {};
+                                msg.topic = 'property';
+                                msg.deviceId = node.deviceid;
+                                msg.payload = JSON.parse(JSON.stringify(twin.properties));
+                                node.send(msg);
+                                deviceTwin = twin;
+                                // Set the device information properties
+                                if (node.information) {
+                                    node.log(node.deviceid + ' -> Sending device information.');
+                                    var information = {};
+                                    // Check is value is JSON, if so parse it
+                                    for (let property in node.information) {
+                                        var twinValue = node.information[property].value;
+                                        try {
+                                            twinValue = JSON.parse(node.information[property].value);
+                                        }
+                                        catch (err) { 
+                                            // do nothing, it is not JSON just text/value
+                                        }
+                                        finally {
+                                            // Set the new device information values
+                                            information[node.information[property].name] = twinValue;
+                                        };
+                                    };
+                                    // Clean up any property that was deleted
+                                    for (let item in deviceTwin.properties.reported) {
+                                        if (!item.includes("$") && (item !== "update") && !information[item]) {
+                                            information[item] =  null;
+                                        }
+                                    }
+                                    // Send the device information
+                                    sendDeviceProperties(node, twin, information);
+                                }
+
+                                // Get the desired properties
+                                twin.on('properties.desired', function(payload) {
+                                    node.log(node.deviceid + ' -> Desired properties received: ' + JSON.stringify(payload));
+                                    var msg = {};
+                                    msg.topic = 'property';
+                                    msg.deviceId = node.deviceid;
+                                    msg.payload = payload;
+                                    node.send(msg);
+                                    // Report back received desired properties ** Only for IoT Central Devices **
+                                    if (node.isIotcentral) {
+                                        for (let setting in payload){
+                                            if (setting.indexOf('$') === -1) {
+                                                var patch = {
+                                                    [setting]: {
+                                                        value: payload[setting].value,
+                                                        status: 'completed',
+                                                        desiredVersion: payload.$version,
+                                                        message: 'Node-Red Azure IoT Device'
+                                                    }
+                                                }
+                                                sendDeviceProperties(node, twin, patch);
                                             }
                                         }
-                                        sendDeviceProperties(node, twin, patch);
                                     }
-                                }
+                                });
                             }
                         });
-                    }
-                });
 
-                node.on('close', function() {
-                    node.log(node.deviceid + ' -> Azure IoT Device Client closed.');
-                    deviceTwin.removeAllListeners();
-                    client.removeAllListeners();
-                    client.close();
-                });
+                        // Listen to node input to send telemetry or reported properties
+                        node.on('input', function (msg) {
+                            if (typeof (msg.payload) === "string") {
+                                //Converting string to JSON Object
+                                msg.payload = JSON.parse(msg.payload);
+                            }
+                            if (msg.topic === 'telemetry') {
+                                sendDeviceTelemetry(node, client, msg.payload, msg.properties);
+                            } else if (msg.topic === 'property' && deviceTwin) {
+                                sendDeviceProperties(node, deviceTwin, msg.payload);
+                            } else if (msg.topic === 'response') { 
+                                sendMethodResponse(node, msg)
+                            } else {
+                                node.error(node.deviceid + ' -> Incorrect input. Must be of type \"telemetry\" or \"property\" or \"response\".');
+                            }
+                        });
 
-                // Listen to node input to send telemetry or reported properties
-                node.on('input', function (msg) {
-                    if (typeof (msg.payload) === "string") {
-                        //Converting string to JSON Object
-                        msg.payload = JSON.parse(msg.payload);
-                    }
-                    if (msg.topic === 'telemetry') {
-                        sendDeviceTelemetry(node, client, msg.payload);
-                    } else if (msg.topic === 'property' && deviceTwin) {
-                        sendDeviceProperties(node, deviceTwin, msg.payload);
-                    } else if (msg.topic === 'response') { 
-                        sendMethodResponse(node, msg)
-                    } else {
-                        node.error(node.deviceid + ' -> Incorrect input. Must be of type \"telemetry\" or \"property\" or \"response\".');
-                    }
-                });
+                        // Listen to commands for defined direct methods
+                        for (let method in node.methods) {
+                            node.log(node.deviceid + ' -> adding synchronous command: ' + node.methods[method].name);
+                            var mthd = node.methods[method].name;
+                            // Define the method on the client
+                            client.onDeviceMethod(mthd, function(request, response) {
+                                node.log(node.deviceid + ' -> Command received: ' + request.methodName);
+                                node.log(node.deviceid + ' -> Command payload: ' + JSON.stringify(request.payload));
+                                node.send({payload: request, topic: "command", deviceId: node.deviceid});
 
-                // Listen to commands for defined direct methods
-                for (let method in node.methods) {
-                    node.log(node.deviceid + ' -> adding synchronous command: ' + node.methods[method].name);
-                    var mthd = node.methods[method].name;
-                    // Define the method on the client
-                    client.onDeviceMethod(mthd, function(request, response) {
-                        node.log(node.deviceid + ' -> Command received: ' + request.methodName);
-                        node.log(node.deviceid + ' -> Command payload: ' + JSON.stringify(request.payload));
-                        node.send({payload: request, topic: "command", deviceId: node.deviceid});
+                                // Now wait for the response
+                                getResponse(node, request.requestId).then(function(rspns){
+                                    node.log(node.deviceid + ' -> Method response status: ' + rspns.status);
+                                    node.log(node.deviceid + ' -> Method response payload: ' + JSON.stringify(rspns.payload));
+                                    response.send(rspns.status, rspns.payload, function(err) {
+                                        if (err) {
+                                        node.log(node.deviceid + ' -> Failed sending method response: ' + err);
+                                        } else {
+                                        node.log(node.deviceid + ' -> Successfully sent method response: ' + request.methodName);
+                                        }
+                                    });
+                                })
+                                .catch(function(err){
+                                    node.error(node.deviceid + ' -> Failed sending method response: \"' + request.methodName + '\", error: ' + err);
+                                });
+                            });
+                        };
 
-                        // Now wait for the response
-                        getResponse(node, request.requestId).then(function(rspns){
-                            node.log(node.deviceid + ' -> Method response status: ' + rspns.status);
-                            node.log(node.deviceid + ' -> Method response payload: ' + JSON.stringify(rspns.payload));
-                            response.send(rspns.status, rspns.payload, function(err) {
+                        // Start listening to C2D messages
+                        node.log(node.deviceid + ' -> listening to C2D messages');
+                        // Define the message listener
+                        client.on('message', function (msg) {
+                            node.log(node.deviceid + ' -> C2D message received, data: ' + msg.data);
+                            var message = {
+                                messageId: msg.messageId,
+                                data: msg.data.toString('utf8'),
+                                properties: msg.properties
+                            };
+                            node.send({payload: message, topic: "message", deviceId: node.deviceid});
+                            client.complete(msg, function (err) {
                                 if (err) {
-                                node.log(node.deviceid + ' -> Failed sending method response: ' + err);
+                                    node.error(node.deviceid + ' -> C2D Message complete error: ' + err);
                                 } else {
-                                node.log(node.deviceid + ' -> Successfully sent method response: ' + request.methodName);
+                                    node.log(node.deviceid + ' -> C2D Message completed.');
                                 }
                             });
-                        })
-                        .catch(function(err){
-                            node.error(node.deviceid + ' -> Failed sending method response: \"' + request.methodName + '\", error: ' + err);
                         });
-                    });
-                };
-
-                // Start listening to C2D messages
-                node.log(node.deviceid + ' -> listening to C2D messages');
-                // Define the message listener
-                client.on('message', function (msg) {
-                    node.log(node.deviceid + ' -> C2D message received, data: ' + msg.data);
-                    var message = {
-                        messageId: msg.messageId,
-                        data: msg.data.toString('utf8'),
-                        properties: msg.properties
-                    };
-                    node.send({payload: message, topic: "message", deviceId: node.deviceid});
-                    client.complete(msg, function (err) {
-                        if (err) {
-                            node.error(node.deviceid + ' -> C2D Message complete error: ' + err);
-                        } else {
-                            node.log(node.deviceid + ' -> C2D Message completed.');
-                        }
-                    });
+                    }
                 });
             }
         });
     };
 
     // Send messages to IoT platform (Transparant Edge, IoT Hub, IoT Central)
-    function sendDeviceTelemetry(node, client, message) {
+    function sendDeviceTelemetry(node, client, message, properties) {
         if (validateMessage(message)){
             if (message.timestamp && isNaN(Date.parse(message.timestamp))) {
                 node.error(node.deviceid + ' -> Invalid format: if present, timestamp must be in ISO format (e.g., YYYY-MM-DDTHH:mm:ss.sssZ)');
             } else {
                 // Create message and set encoding and type
                 var msg = new Message(JSON.stringify(message));
+                // Check if properties set and add if so
+                if (properties){
+                    for (let property in properties) {
+                        msg.properties.add(properties[property].key, properties[property].value);
+                    }
+                }
                 msg.contentEncoding = 'utf-8';
                 msg.contentType = 'application/json';
+                // Send the message
                 client.sendEvent(msg, function(err,res) {
                     if(err) {
                         node.error(node.deviceid + ' -> An error ocurred when sending telemetry: ' + err);
