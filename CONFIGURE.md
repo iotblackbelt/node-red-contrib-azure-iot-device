@@ -31,6 +31,7 @@ The following table contains explanation of the fields and options on the **Devi
 | Field/option | Description | Depends on |
 | --- | --- | --- |
 | Device ID | This field will contain the device ID of the Azure IoT device as it is/will be on IoT Hub or IoT Central. | - |
+| PnP Model ID | This field will contain the PnP Model ID for the Azure IoT device. The PnP Model ID will be used to setup the device as a [PnP Device](https://docs.microsoft.com/en-us/azure/iot-pnp/overview-iot-plug-and-play). What the reported properties or telemetry should look like when sending, can be found [here](https://docs.microsoft.com/en-us/azure/iot-pnp/concepts-convention). | - |
 | Connection Type | This option indicates whether the device will use a preset connection string or use [Device Provisioning Service](https://docs.microsoft.com/en-us/azure/iot-dps/). Depending on the option you select different fields will be shown to fill. | - |
 | Authentication Method | Azure IoT supports two authentication types, SAS token-based authentication and X.509 certificate authentication (individual and CA based). | - |
 | IoT Hub Hostname | The [Azure IoT Hub](https://docs.microsoft.com/en-us/azure/iot-hub/) Hostname '%iothubname%.azure-device.net'. The name can be found in the Azure portal on the overview page of the IoT Hub. | Connection Type |
@@ -43,6 +44,11 @@ The following table contains explanation of the fields and options on the **Devi
 | X.509 Key | The Azure IoT device X.509 key. The key can be uploaded. | Authentication Method |
 | Protocol | The Azure IoT platform supports three communication [protocols](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-devguide-protocols): HTTPS, MQTT and AMQP. AMQP and MQTT can also be used over websockets. For this node you can only select the MQTT and AMQP, because these protocols support direct communicaton between device and cloud. If you need to use the 443 port outbound from the device, you can use the websockets options. | - |
 
+### Custom Provisioning
+The Custom Provisioning tab can be used to define additional payload data for Azure Device Provisioning Services. This [additonal data](https://docs.microsoft.com/en-us/azure/iot-dps/how-to-send-additional-data) can be used for custom provisioning using Azure Device Provisioning Services. The payload fields on this tab will only be visible if the Connection Type is set to "Device provisioning service". The data needs to be a valid JSON structure.
+
+![Custom Provisioning tab](images/custom-provisioning-tab-00.png)
+
 ### Direct Methods
 The [Direct Methods](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-devguide-direct-methods) tab is used to indicate which methods are supported by the Azure IoT Device node. This will also require to create processing flows fror each method supported. This tab contain a table where direct methods can be added or deleted. 
 
@@ -53,16 +59,6 @@ Direct methods can be used from the cloud side to trigger an activity on the dev
 ##### Fields and options
 Direct Methods items can be added or deleted in this tab. Each item will require:
 - Direct Method name
-
-### Device Information
-The **Device Information** tab enables you to set initial reported properties for a device. [Azure Plug and Play](https://docs.microsoft.com/en-us/azure/iot-pnp/) enables you to provide information on the device that is connected. 
-
-![Device Information tab](images/device-information-tab-00.png)
-
-##### Fields
-Device Information items can be added or deleted in this tab. Each item will require:
-- Item name
-- Item content. This content can be a single value or a JSON formated string.
 
 ### Iot Edge Gateway
 The **Iot Edge Gateway** tab enables you to setup your device as a downstream devcie to an IoT Edge device. More information on how to setup an [IoT Edge as a transparant gateway](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-create-transparent-gateway) and use a device as a [downstream device](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-authenticate-downstream-device). All code to enable the downstream device is already implemented in the node. The node just needs to right hostname and certificate to enable to connection between the device and the IoT Edge.

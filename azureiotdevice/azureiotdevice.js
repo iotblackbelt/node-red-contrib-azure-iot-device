@@ -58,6 +58,7 @@ module.exports = function (RED) {
         // Store node for further use
         var node = this;
         node.deviceid = config.deviceid;
+        node.pnpModelid = config.pnpModelid;
         node.connectiontype = config.connectiontype;
         node.authenticationmethod = config.authenticationmethod;
         node.enrollmenttype = config.enrollmenttype;
@@ -67,7 +68,7 @@ module.exports = function (RED) {
         node.saskey = config.saskey;
         node.protocol = config.protocol;
         node.methods = config.methods;
-        node.information = config. information;
+        node.DPSpayload = config.DPSpayload;
         node.gatewayHostname = config.gatewayHostname;
         node.cert = config.cert;
         node.key = config.key;
@@ -117,7 +118,7 @@ module.exports = function (RED) {
                 key : node.key
             };
         };
-        
+
         // Create the client connection string based on the node settings.
         // Either use the provided conectiong string or use DPS to provision.
         node.log(node.deviceid + ' -> Initiate IoT Device connection string.');
@@ -136,7 +137,22 @@ module.exports = function (RED) {
                 (node.authenticationmethod == "sas") ? new SecurityClient.sas(node.deviceid, node.saskey) :
                     new SecurityClient.x509(node.deviceid, options);
 
+            // Create provisioning client
             var provisioningClient = ProvisioningDeviceClient.create(GlobalProvisoningEndpoint, node.scopeid, new provisioningProtocol(), provisioningSecurityClient);
+
+            // set the provisioning payload (for custom allocation)
+            var payload = {};
+            if (node.DPSpayload) {
+                // Turn payload into JSON
+                try {
+                    payload = JSON.parse(node.DPSpayload);
+                    node.log(node.deviceid + ' -> DPS Payload added.');
+                } catch (err) {
+                    // do nothing 
+                }
+            }
+            provisioningClient.setProvisioningPayload(JSON.stringify(payload));
+
             // Register the device.
             node.log(node.deviceid + ' -> Provision IoT Device using DPS.');
             provisioningClient.register(function(err, result) {
@@ -145,7 +161,7 @@ module.exports = function (RED) {
                     setStatus(node, statusEnum.error);
                 } else {
                     node.log(node.deviceid + ' -> Registration succeeded.');
-                    node.log(node.deviceid + ' -> assigned hub: ' + result.assignedHub);
+                    node.log(node.deviceid + ' -> Assigned hub: ' + result.assignedHub);
                     var msg = {};
                     msg.topic = 'provisioning';
                     msg.deviceId = result.deviceId;
@@ -180,6 +196,12 @@ module.exports = function (RED) {
         node.log(node.deviceid + ' -> Connection string: ' + connectionString);
         var client = Client.fromConnectionString(connectionString, deviceProtocol);
         var deviceTwin;
+
+        // Add pnp modelid to options
+        if (node.pnpModelid) {
+            options.modelId = node.pnpModelid;
+            node.log(node.deviceid + ' -> Set PnP Model ID: ' + node.pnpModelid);
+        }
 
         // Ensure resources are reset
         node.on('close', function(done) {
@@ -237,34 +259,7 @@ module.exports = function (RED) {
                                 msg.payload = JSON.parse(JSON.stringify(twin.properties));
                                 node.send(msg);
                                 deviceTwin = twin;
-                                // Set the device information properties
-                                if (node.information) {
-                                    node.log(node.deviceid + ' -> Sending device information.');
-                                    var information = {};
-                                    // Check is value is JSON, if so parse it
-                                    for (let property in node.information) {
-                                        var twinValue = node.information[property].value;
-                                        try {
-                                            twinValue = JSON.parse(node.information[property].value);
-                                        }
-                                        catch (err) { 
-                                            // do nothing, it is not JSON just text/value
-                                        }
-                                        finally {
-                                            // Set the new device information values
-                                            information[node.information[property].name] = twinValue;
-                                        };
-                                    };
-                                    // Clean up any property that was deleted
-                                    for (let item in deviceTwin.properties.reported) {
-                                        if (!item.includes("$") && (item !== "update") && !information[item]) {
-                                            information[item] =  null;
-                                        }
-                                    }
-                                    // Send the device information
-                                    sendDeviceProperties(node, twin, information);
-                                }
-
+                                
                                 // Get the desired properties
                                 twin.on('properties.desired', function(payload) {
                                     node.log(node.deviceid + ' -> Desired properties received: ' + JSON.stringify(payload));
@@ -304,7 +299,8 @@ module.exports = function (RED) {
                             } else if (msg.topic === 'property' && deviceTwin) {
                                 sendDeviceProperties(node, deviceTwin, msg.payload);
                             } else if (msg.topic === 'response') { 
-                                sendMethodResponse(node, msg)
+                                node.log(node.deviceid + ' -> Method response received with id: ' + msg.payload.requestId);
+                                sendMethodResponse(node, msg.payload)
                             } else {
                                 node.error(node.deviceid + ' -> Incorrect input. Must be of type \"telemetry\" or \"property\" or \"response\".');
                             }
@@ -312,7 +308,7 @@ module.exports = function (RED) {
 
                         // Listen to commands for defined direct methods
                         for (let method in node.methods) {
-                            node.log(node.deviceid + ' -> adding synchronous command: ' + node.methods[method].name);
+                            node.log(node.deviceid + ' -> Adding synchronous command: ' + node.methods[method].name);
                             var mthd = node.methods[method].name;
                             // Define the method on the client
                             client.onDeviceMethod(mthd, function(request, response) {
@@ -339,7 +335,7 @@ module.exports = function (RED) {
                         };
 
                         // Start listening to C2D messages
-                        node.log(node.deviceid + ' -> listening to C2D messages');
+                        node.log(node.deviceid + ' -> Listening to C2D messages');
                         // Define the message listener
                         client.on('message', function (msg) {
                             node.log(node.deviceid + ' -> C2D message received, data: ' + msg.data);
@@ -465,6 +461,7 @@ module.exports = function (RED) {
     RED.nodes.registerType("azureiotdevice", AzureIoTDevice, {
         defaults: {
             deviceid: {value: ""},
+            pnpModelid: {value: ""},
             connectiontype: {value: ""},
             authenticationmethod: {value: ""},
             enrollmenttype: {value: ""},
@@ -476,7 +473,7 @@ module.exports = function (RED) {
             keyname: {value: ""},
             protocol: {value: ""},
             methods: {value: []},
-            information: {value: []},
+            DPSpayload: {value: ""},
             isDownstream: {value: false},
             gatewayHostname: {value: ""},
             caname: {value:""},

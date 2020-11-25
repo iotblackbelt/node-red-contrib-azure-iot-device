@@ -4,6 +4,7 @@
         color: '#00A4EF',
         defaults: {
             deviceid: {value:"", required:true},
+            pnpModelid: {value:"", required:false},
             connectiontype: {value: "", required:true},
             authenticationmethod: {value: "", required:true},
             iothub: {value: "", required: false},
@@ -15,7 +16,7 @@
             keyname: {value:""},
             protocol: {value: "", required:true},
             methods: {value: []},
-            information: {value: []},
+            DPSpayload: {value:""},
             gatewayHostname: {value:"", required: false},
             caname: {value:""},
             cert: {type:"text", value: "", required:false},
@@ -48,6 +49,15 @@
                 reader.readAsText(file,'utf-8');
             }
 
+            // Add DPS payload editor
+            this.editor = RED.editor.createEditor({
+                id: 'node-input-DPSpayload-editor',
+                mode: 'ace/mode/json',
+                value: $("#node-input-DPSpayload").val()
+            });
+            this.editor.focus();
+
+            // React on file changes
             $("#node-input-certfile" ).on("change", function() {
                 saveFile("cert", this.files[0]);
             });
@@ -82,10 +92,10 @@
             let tabs = RED.tabs.create({
             id: "node-input-device-tabs",
                 onchange: function(tab) {
-                $("#node-input-device-tabs-content")
-                    .children()
-                    .hide();
-                $("#" + tab.id).show();
+                    $("#node-input-device-tabs-content")
+                        .children()
+                        .hide();
+                    $("#" + tab.id).show();
                 }
             });
 
@@ -95,13 +105,13 @@
             });
 
             tabs.addTab({
-                id: "compact-device-tab-methods",
-                label: this._("Direct Methods")
+                id: "compact-device-tab-customDPS",
+                label: this._("Custom Provisioning")
             });
 
             tabs.addTab({
-                id: "compact-device-tab-information",
-                label: this._("Device Information")
+                id: "compact-device-tab-methods",
+                label: this._("Direct Methods")
             });
 
             tabs.addTab({
@@ -211,7 +221,6 @@
 
             function switchDialogResize() {
                 switchMethodsDialogResize();
-                switchInformationDialogResize();
             }
 
             // dialog direct Methods handling
@@ -232,113 +241,6 @@
                 parseInt(editorRow.css("marginTop")) +
                     parseInt(editorRow.css("marginBottom"));
                 $("#node-input-device-methods-container-div").css(
-                    "height",
-                    height + "px"
-                );
-            }
-
-            // Device Information
-            let informationItemCount = 0;
-            if (node.information && node.information.length > 0) {
-                informationItemCount = node.information.length;
-                node.information.forEach(function(element, index, array) {
-                    generateInformationEntry(element, index);
-                });
-            }
-
-            function generateInformationEntry(information, id) {
-                let container = $("<li/>", {
-                style:
-                    "background: #fefefe; margin:0; padding:8px 0px; border-bottom: 1px solid #ccc;"
-                });
-                let row = $('<div id="row' + id + '"/>').appendTo(container);
-
-                $(
-                    '<i style="color: #eee; cursor: move;" class="node-input-device-information-handle fa fa-bars"></i>'
-                ).appendTo(row);
-
-                let nameField = $("<input/>", {
-                    id: "node-input-device-information-name" + id,
-                    class: "deviceInformationName",
-                    type: "text",
-                    style: "margin-left:5px;width:35%;",
-                    placeholder: "name"
-                }).appendTo(row);
-
-                nameField.val(information.name);
-
-                let valueField = $("<input/>", {
-                    id: "node-input-device-information-value" + id,
-                    class: "deviceInformationValue",
-                    type: "text",
-                    style: "margin-left:5px;width:50%",
-                    placeholder: "value"
-                }).appendTo(row);
-
-                valueField.val(information.value);
-
-                let finalspan = $("<span/>", {
-                    style: "float: right;margin-right: 10px;"
-                }).appendTo(row);
-
-                let removeInformationButton = $("<a/>", {
-                href: "#",
-                    id: "node-button-information-remove" + id,
-                    class: "editor-button editor-button-small",
-                    style: "margin-top: 7px; margin-left: 5px;"
-                }).appendTo(finalspan);
-
-                $("<i/>", { class: "fa fa-remove" }).appendTo(removeInformationButton);
-
-                removeInformationButton.click(function() {
-                    container.css({ background: "#fee" });
-                    container.fadeOut(300, function() {
-                        $(this).remove();
-                    });
-                });
-
-                $("#node-input-device-information-container").append(container);
-            };
-
-            $("#node-input-device-information-container").sortable({
-                axis: "y",
-                handle: ".node-input-device-information-handle",
-                cursor: "move"
-            });
-
-            $(
-                "#node-input-device-information-container .node-input-device-information-handle"
-            ).disableSelection();
-
-
-            $("#node-input-device-information-add").click(function() {
-                if (!informationItemCount || informationItemCount < 0) {
-                    informationItemCount = 0;
-                }
-                generateInformationEntry({ name: "", value: "", json: "" }, informationItemCount++); // length is every time one more than index
-                $("#node-input-device-information-container-div").scrollTop(
-                    $("#node-input-device-information-container-div").get(0).scrollHeight
-                );
-            });
-
-            // dialog User handling
-            function switchInformationDialogResize() {
-                let rows = $(
-                    "#dialog-form>div:not(.node-input-device-information-container-row)"
-                );
-                let height = $("#dialog-form").height();
-
-                rows.each(function(index, row) {
-                    height -= row.outerHeight(true);
-                });
-
-                let editorRow = $(
-                    "#dialog-form>div.node-input-device-information-container-row"
-                );
-                height -=
-                parseInt(editorRow.css("marginTop")) +
-                    parseInt(editorRow.css("marginBottom"));
-                $("#node-input-device-information-container-div").css(
                     "height",
                     height + "px"
                 );
@@ -375,32 +277,32 @@
                 });
             });
 
-            // Save the information items for this device
-            let cacheInformation = $("#node-input-device-information-container").children();
-            node.information = [];
-            cacheInformation.each(function() {
-                node.information.push({
-                    name: $(this)
-                        .find(".deviceInformationName")
-                        .val(),
-                    value: $(this)
-                        .find(".deviceInformationValue")
-                        .val()
-                });
-            });
+            // Save the DPS custom payload
+            $("#node-input-DPSpayload").val(this.editor.getValue());
+            this.editor.destroy();
+            delete this.editor;
+        },
+        oneditcancel: function() {
+            // Remove the DPS Payload editor
+            this.editor.destroy();
+            delete this.editor;
         }
     });
 </script>
 
 <script type="text/x-red" data-template-name="azureiotdevice">
     <div class="form-row">
-        <ul style="background: #fff; min-width: 600px; margin-bottom: 20px;" id="node-input-device-tabs"></ul>
+        <ul style="background: #fff; min-width: 680px; margin-bottom: 20px;" id="node-input-device-tabs"></ul>
     </div>
     <div id="node-input-device-tabs-content" style="min-height: 170px;">
         <div id="compact-device-tab-identity" style="display:none">
             <div class="form-row">
                 <label for="node-input-deviceid"><i class="icon-tag"></i> <span>Device ID</span></label>
                 <input type="text" id="node-input-deviceid" placeholder="%deviceId%">
+            </div>
+            <div class="form-row">
+                <label for="node-input-pnpModelid"><i class="icon-tag"></i> <span>PnP Model ID</span></label>
+                <input type="text" id="node-input-pnpModelid" placeholder="%PnP Model ID%">
             </div>
             <div class="form-row">
                 <label for="node-input-connectiontype"><i class="icon-tag"></i> <span>Connection Type</span></label>
@@ -471,6 +373,13 @@
                 </select>
             </div>
         </div>
+        <div id="compact-device-tab-customDPS" style="display:none">
+            <div class="form-row dps-row">
+                <div><i class="icon-tag"></i> <span>Device Provisioning Payload (JSON)</span></div>
+                <div style="height: 250px;" class="node-json-editor" id="node-input-DPSpayload-editor"></div>
+                <input type="hidden" id="node-input-DPSpayload" autofocus="autofocus">
+            </div>
+        </div>
         <div id="compact-device-tab-methods" style="display:none">
             <div class="form-row node-input-device-methods-container-row" style="margin-bottom: 0px;">
                 <div id="node-input-device-methods-container-div"
@@ -483,20 +392,6 @@
                 <a href="#" class="editor-button editor-button-small" id="node-input-device-methods-add"
                     style="margin-top: 4px;"><i class="fa fa-plus"></i>
                 <span data-i18n="methods-addButton"></span></a>
-            </div>
-        </div>
-        <div id="compact-device-tab-information" style="display:none">
-            <div class="form-row node-input-device-information-container-row" style="margin-bottom: 0px;">
-                <div id="node-input-device-information-container-div"
-                    style="box-sizing: border-box; border-radius: 5px;
-                    height: 450px; padding: 5px; border: 1px solid #ccc; overflow-y:scroll;">
-                    <ol id="node-input-device-information-container" style="list-style-type:none; margin: 0;"></ol>
-                </div>
-            </div>
-            <div class="form-row">
-                <a href="#" class="editor-button editor-button-small" id="node-input-device-information-add"
-                    style="margin-top: 4px;"><i class="fa fa-plus"></i>
-                <span data-i18n="information-addButton"></span></a>
             </div>
         </div>
         <div id="compact-device-tab-iotedge" style="display:none">

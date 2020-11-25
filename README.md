@@ -18,7 +18,3 @@ In the [use](https://github.com/iotblackbelt/node-red-contrib-azure-iot-device/b
 - receiving desired properties
 - updating reported properties
 - receiving C2D messages
-
-## Future plans for development
-It is our intention to add the following features to the Azure IoT Device Node-RED node:
-* Full [Azure IoT Plug and Play](https://docs.microsoft.com/en-us/azure/iot-pnp/overview-iot-plug-and-play) support.
