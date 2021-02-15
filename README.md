@@ -18,3 +18,6 @@ In the [use](https://github.com/iotblackbelt/node-red-contrib-azure-iot-device/b
 - receiving desired properties
 - updating reported properties
 - receiving C2D messages
+
+## Resilience
+The node is developed to resist network loss. If there is no connectivity, the node will try to re-establish a device connection based on the set retry interval. The node doesn't store and forward. All message and properties sent during a loss of connectivity, will be lost.

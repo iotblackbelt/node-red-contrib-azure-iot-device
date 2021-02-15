@@ -15,6 +15,7 @@
             certname: {value:""},
             keyname: {value:""},
             protocol: {value: "", required:true},
+            retryInterval: {value: 30, required:true, validate: RED.validators.number()},
             methods: {value: []},
             DPSpayload: {value:""},
             gatewayHostname: {value:"", required: false},
@@ -371,6 +372,10 @@
                     <option value="mqtt">MQTT</option>
                     <option value="mqttWs">MQTT_WS</option>
                 </select>
+            </div>
+            <div class="form-row">
+                <label for="node-input-retryInterval"><i class="icon-tag"></i> <span>Retry interval</span></label>
+                <input type="integer" width=50 id="node-input-retryInterval" placeholder="%connection retry interval%">
             </div>
         </div>
         <div id="compact-device-tab-customDPS" style="display:none">

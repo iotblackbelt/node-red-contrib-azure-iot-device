@@ -40,9 +40,13 @@ The following table contains explanation of the fields and options on the **Devi
 | Enrollment type | Selection to indicate whether the device provisioning enrollment is an individual or a group enrollment. | Connection Type |
 | Authentication Method | Selection to indecate whther the attestation method used is shared access key (SAS) or certificate (X.509). | - |
 | SAS Key | The [symmetric key](https://docs.microsoft.com/en-us/azure/iot-dps/concepts-symmetric-key-attestation) to authenticate with the Device Provisioning Service (DPS) instance or Azure IOT Central. | Authentication Method |
-| X.509 Certificate | The [X.509](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-x509ca-overview) certifate, containing the full chain of the certificate tree for the IoT device. The certificate can be uploaded. | Authentication Method |
-| X.509 Key | The Azure IoT device X.509 key. The key can be uploaded. | Authentication Method |
+| X.509 Certificate | The [X.509](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-x509ca-overview) certifate, containing the full chain of the certificate tree for the IoT device. The certificate must be uploaded. | Authentication Method |
+| X.509 Key | The Azure IoT device X.509 key. The key must be uploaded. | Authentication Method |
 | Protocol | The Azure IoT platform supports three communication [protocols](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-devguide-protocols): HTTPS, MQTT and AMQP. AMQP and MQTT can also be used over websockets. For this node you can only select the MQTT and AMQP, because these protocols support direct communicaton between device and cloud. If you need to use the 443 port outbound from the device, you can use the websockets options. | - |
+| Retry interval | This interval determines the time-out the node will use to retry to connect, after the connection is lost. | - |
+
+
+> NB: ensure the cert and key file are valid files, as a SDK issue will crash Node-RED.
 
 ### Custom Provisioning
 The Custom Provisioning tab can be used to define additional payload data for Azure Device Provisioning Services. This [additonal data](https://docs.microsoft.com/en-us/azure/iot-dps/how-to-send-additional-data) can be used for custom provisioning using Azure Device Provisioning Services. The payload fields on this tab will only be visible if the Connection Type is set to "Device provisioning service". The data needs to be a valid JSON structure.
@@ -71,7 +75,7 @@ The following table contains explanation of the fields and options on the **IoT 
 | Field | Description |
 | --- | --- |
 | Hostname | This field will contain the IoT Edge hostname. The hostname identifies a specific IoT Edge. |
-| X.509 Gateway CA Certificate | The IoT Edge X.509 CA certificate. This certificate will be used to enable encrypted and trusted communication between the device and the IoT Edge. The certificate can be uploaded. |
+| X.509 Gateway CA Certificate | The IoT Edge X.509 CA certificate. This certificate will be used to enable encrypted and trusted communication between the device and the IoT Edge. The certificate must be uploaded. |
 
 ## Finalize
 Once you've configured the device, you need to deploy the node in Node-RED. If the setup was correct, the device will connect to the Azure IoT platform. In the debug window you can see whether the configuration was correct and the device was able to provision and connect to the Azure IoT platform. How to use the node can be found [here](./USE.md).
