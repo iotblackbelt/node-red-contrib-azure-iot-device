@@ -32,6 +32,8 @@ var ProvisioningDeviceClient = require('azure-iot-provisioning-device').Provisio
 var GlobalProvisoningEndpoint = "global.azure-devices-provisioning.net";
 
 var crypto = require('crypto');
+var forge = require('node-forge');
+var pki = forge.pki;
 
 var client = null;
 var twin = null;
@@ -94,6 +96,28 @@ module.exports = function (RED) {
         node.status({ fill: status.fill, shape: status.shape, text: status.text });
     };
 
+    // Send catchable error to node-red
+    var error = function (node, payload, message) {
+        var msg = payload;
+        if (!payload.topic) {
+            msg = {};
+            msg.topic = 'error';
+            msg.payload = payload;
+        }
+        node.error(message, msg);
+    }
+
+    // Check if valid cert
+    function verifyCertificate(pem) {
+        try {
+            // Get the certificate from pem, if successful it is a cert
+            var cert = pki.certificateFromPem(pem);
+            return true;
+        } catch (err) {
+            return false;
+        }
+    };
+
     // Compute device SAS key
     function computeDerivedSymmetricKey(masterKey, regId) {
         return crypto.createHmac('SHA256', Buffer.from(masterKey, 'base64'))
@@ -127,6 +151,31 @@ module.exports = function (RED) {
 
     // Initiate provisioning and retry if network not available.
     function initiateDevice(node) {
+        
+        // Ensure resources are reset
+        node.on('close', function(done) {
+            closeAll(node);
+            done();
+        });
+
+        // Listen to node input to send telemetry or reported properties
+        node.on('input', function (msg) {
+            if (typeof (msg.payload) === "string") {
+                //Converting string to JSON Object
+                msg.payload = JSON.parse(msg.payload);
+            }
+            if (msg.topic === 'telemetry') {
+                sendDeviceTelemetry(node, client, msg, msg.properties);
+            } else if (msg.topic === 'property' && twin) {
+                sendDeviceProperties(node, twin, msg);
+            } else if (msg.topic === 'response') { 
+                node.log(node.deviceid + ' -> Method response received with id: ' + msg.payload.requestId);
+                sendMethodResponse(node, msg)
+            } else {
+                error(node, msg, node.deviceid + ' -> Incorrect input. Must be of type \"telemetry\" or \"property\" or \"response\".');
+            }
+        });
+
         // Provision device
         provisionDevice(node).then( function(result) {
             if (result) {
@@ -134,11 +183,11 @@ module.exports = function (RED) {
                 connectDevice(node, result).then( function(result) {
                     // Get the twin, throw error if it fails
                     retrieveTwin(node).catch(err => {
-                        node.error(node.deviceid + ' -> Device connection failed:' + JSON.stringify(err));
+                        error(node, err, node.deviceid + ' -> Retrieving device twin failed');
                         throw new Error(err);
                     });
                 }).catch( function(err) {
-                    node.error(node.deviceid + ' -> Device connection failed:' + JSON.stringify(err));
+                    error(node, err, node.deviceid + ' -> Device connection failed');
                     throw new Error(err);
                 });
             } else {
@@ -148,7 +197,7 @@ module.exports = function (RED) {
                 }, node.retryInterval * 1000);
             }
         }).catch( function(err) {
-            node.error(node.deviceid + ' -> Device provisioning failed:' + JSON.stringify(err));
+            error(node, err, node.deviceid + ' -> Device provisioning failed.');
         });
     };
 
@@ -165,10 +214,16 @@ module.exports = function (RED) {
             // Set the security properties
             var options = {};
             if (node.authenticationmethod === "x509") {
-                options = {
-                    cert : node.cert,
-                    key : node.key
-                };
+                // Set cert options // verify work around for SDK issue
+                if (verifyCertificate(node.cert) && verifyCertificate(node.key))
+                {
+                    options = {
+                        cert : node.cert,
+                        key : node.key
+                    };
+                } else {
+                    reject("Invalid certificates.");
+                }
             };
 
             // Set provisioning protocol to selected (default to AMQP-WS)
@@ -250,7 +305,7 @@ module.exports = function (RED) {
                 options.ca = node.ca;
                 connectionString = connectionString + ';GatewayHostName=' + node.gatewayHostname;
             } catch (err){
-                node.error(node.deviceid + ' -> Certificate file error: ' + err);
+                error(node, err, node.deviceid + ' -> Certificate file error.');
                 setStatus(node, statusEnum.error);
             };
         }
@@ -265,39 +320,15 @@ module.exports = function (RED) {
             node.log(node.deviceid + ' -> Set PnP Model ID: ' + node.pnpModelid);
         }
 
-        // Ensure resources are reset
-        node.on('close', function(done) {
-            closeAll(node);
-            done();
-        });
-
-        // Listen to node input to send telemetry or reported properties
-        node.on('input', function (msg) {
-            if (typeof (msg.payload) === "string") {
-                //Converting string to JSON Object
-                msg.payload = JSON.parse(msg.payload);
-            }
-            if (msg.topic === 'telemetry') {
-                sendDeviceTelemetry(node, client, msg.payload, msg.properties);
-            } else if (msg.topic === 'property' && deviceTwin) {
-                sendDeviceProperties(node, deviceTwin, msg.payload);
-            } else if (msg.topic === 'response') { 
-                node.log(node.deviceid + ' -> Method response received with id: ' + msg.payload.requestId);
-                sendMethodResponse(node, msg.payload)
-            } else {
-                node.error(node.deviceid + ' -> Incorrect input. Must be of type \"telemetry\" or \"property\" or \"response\".');
-            }
-        });
-
         // React or errors
         client.on('error', function (err) {
-            node.error(node.deviceid + ' -> Device Client error: ' + JSON.stringify(err));
+            error(node, err, node.deviceid + ' -> Device Client error.');
             setStatus(node, statusEnum.error);
         });
 
         // React on disconnect and try to reconnect
         client.on('disconnect', function (err) {
-            node.error(node.deviceid + ' -> Device Client disconnected: ' + JSON.stringify(err));
+            error(node, err, node.deviceid + ' -> Device Client disconnected.');
             setStatus(node, statusEnum.disconnected);
             closeAll(node);
             initiateDevice(node);
@@ -314,7 +345,8 @@ module.exports = function (RED) {
                 node.send({payload: request, topic: "command", deviceId: node.deviceid});
 
                 // Now wait for the response
-                getResponse(node, request.requestId).then( function(rspns){
+                getResponse(node, request.requestId).then( function(message){
+                    var rspns = message.payload;
                     node.log(node.deviceid + ' -> Method response status: ' + rspns.status);
                     node.log(node.deviceid + ' -> Method response payload: ' + JSON.stringify(rspns.payload));
                     response.send(rspns.status, rspns.payload, function(err) {
@@ -326,7 +358,7 @@ module.exports = function (RED) {
                     });
                 })
                 .catch( function(err){
-                    node.error(node.deviceid + ' -> Failed sending method response: \"' + request.methodName + '\", error: ' + err);
+                    error(node, err, node.deviceid + ' -> Failed sending method response: \"' + request.methodName + '\".');
                 });
             });
         };
@@ -344,14 +376,14 @@ module.exports = function (RED) {
             node.send({payload: message, topic: "message", deviceId: node.deviceid});
             client.complete(msg, function (err) {
                 if (err) {
-                    node.error(node.deviceid + ' -> C2D Message complete error: ' + err);
+                    error(node, err, node.deviceid + ' -> C2D Message complete error.');
                 } else {
                     node.log(node.deviceid + ' -> C2D Message completed.');
                 }
             });
         });
 
-        // Set the no retry option
+        // Set the no retry option, to get quick response if no connection
         var noretry = new NoRetry();
         client.setRetryPolicy(noretry);
 
@@ -363,12 +395,10 @@ module.exports = function (RED) {
                     setStatus(node, statusEnum.connected);
                     resolve(client);
                 }).catch( function(err) {
-                    node.log(node.deviceid + ' -> Client connection error: ' + err);
                     setStatus(node, statusEnum.error);
                     reject(err);
                 });
             }).catch( function(err) {
-                node.log(node.deviceid + ' -> Client connection error: ' + err);
                 setStatus(node, statusEnum.error);
                 reject(err);
             });
@@ -417,7 +447,7 @@ module.exports = function (RED) {
                     }
                 });
             }).catch(err => {
-                node.error(node.deviceid + ' -> Device twin retrieve failed:' + JSON.stringify(err));
+                error(node, err, node.deviceid + ' -> Device twin retrieve failed.');
                 reject(err);
             });
         })
@@ -425,12 +455,12 @@ module.exports = function (RED) {
 
     // Send messages to IoT platform (Transparant Edge, IoT Hub, IoT Central)
     function sendDeviceTelemetry(node, client, message, properties) {
-        if (validateMessage(message)){
+        if (validateMessage(message.payload)){
             if (message.timestamp && isNaN(Date.parse(message.timestamp))) {
-                node.error(node.deviceid + ' -> Invalid telemetry format: if present, timestamp must be in ISO format (e.g., YYYY-MM-DDTHH:mm:ss.sssZ)');
+                error(node, message, node.deviceid + ' -> Invalid telemetry format: if present, timestamp must be in ISO format (e.g., YYYY-MM-DDTHH:mm:ss.sssZ).');
             } else {
                 // Create message and set encoding and type
-                var msg = new Message(JSON.stringify(message));
+                var msg = new Message(JSON.stringify(message.payload));
                 // Check if properties set and add if so
                 if (properties){
                     for (let property in properties) {
@@ -443,48 +473,49 @@ module.exports = function (RED) {
                 if (client) {
                     client.sendEvent(msg, function(err, res) {
                         if(err) {
-                            node.error(node.deviceid + ' -> An error ocurred when sending telemetry: ' + err);
+                            error(node, err, node.deviceid + ' -> An error ocurred when sending telemetry.');
                             setStatus(node, statusEnum.error);
                         } else {
-                            node.log(node.deviceid + ' -> Telemetry sent: ' + JSON.stringify(message));
+                            node.log(node.deviceid + ' -> Telemetry sent: ' + JSON.stringify(message.payload));
                             setStatus(node, statusEnum.connected);
                         }
                     });      
                 } else {
-                    node.error(node.deviceid + ' -> Unable to send telemetry, device not connected.');
+                    error(node, message, node.deviceid + ' -> Unable to send telemetry, device not connected.');
                     setStatus(node, statusEnum.error);
                 }   
             }            
         } else {
-            node.error(node.deviceid + ' -> Invalid telemetry format.');
+            error(node, message, node.deviceid + ' -> Invalid telemetry format.');
         }
     };
 
     
     // Send device reported properties.
-    function sendDeviceProperties(node, twin, properties) {
+    function sendDeviceProperties(node, twin, message) {
         if (twin) {
-            twin.properties.reported.update(properties, function (err) {
+            twin.properties.reported.update(message.payload, function (err) {
                 if (err) {
-                    node.error(node.deviceid + ' -> Sending device properties failed: ' + err);
+                    error(node, err, node.deviceid + ' -> Sending device properties failed.');
                     setStatus(node, statusEnum.error);
                 } else {
-                    node.log(node.deviceid + ' -> Device properties sent: ' + JSON.stringify(properties));
+                    node.log(node.deviceid + ' -> Device properties sent: ' + JSON.stringify(message.payload));
                     setStatus(node, statusEnum.connected);
                 }
             });
         }
         else {
-            node.error(node.deviceid + ' -> Unable to send device properties, device not connected.');
+            error(node, message, node.deviceid + ' -> Unable to send device properties, device not connected.');
         }
     };
 
     // Send device direct method response.
-    function sendMethodResponse(node, methodResponse) {
+    function sendMethodResponse(node, message) {
         // Push the reponse to the array
+        var methodResponse = message.payload;
         node.log(node.deviceid + ' -> Creating response for command: ' + methodResponse.methodName);
         methodResponses.push(
-            {requestId: methodResponse.requestId, response: methodResponse}
+            {requestId: methodResponse.requestId, response: message}
         );
     };
 

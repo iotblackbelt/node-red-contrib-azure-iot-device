@@ -151,6 +151,9 @@ Sending a command response requires you to create a connection to the node input
 The request_id is provided by the received direct method, and will need to be returned to the Azure IoT Device node to establish the connection between command and response.
 The status property is the device-supplied status of method execution. The payload can be anything that is considered an expexted response for the actual direct method.
 
+## Catch errors
+All node errors are catchable. See [Handling errors](https://nodered.org/docs/user-guide/handling-errors#catchable-errors) to understand catchable errors and how to use them.
+
 ## Example flow
 Here is an example flow that implements all input topics and an automated response to a direct method. You only have to [configure](./CONFIGURE.md) your node to represent a device. Once you've configured the node and deployed the flow, the telemetry will be send every 5 seconds and the reported properties can be send by clicking the **Trigger reported properties**.
 

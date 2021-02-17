@@ -45,9 +45,6 @@ The following table contains explanation of the fields and options on the **Devi
 | Protocol | The Azure IoT platform supports three communication [protocols](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-devguide-protocols): HTTPS, MQTT and AMQP. AMQP and MQTT can also be used over websockets. For this node you can only select the MQTT and AMQP, because these protocols support direct communicaton between device and cloud. If you need to use the 443 port outbound from the device, you can use the websockets options. | - |
 | Retry interval | This interval determines the time-out the node will use to retry to connect, after the connection is lost. | - |
 
-
-> NB: ensure the cert and key file are valid files, as a SDK issue will crash Node-RED.
-
 ### Custom Provisioning
 The Custom Provisioning tab can be used to define additional payload data for Azure Device Provisioning Services. This [additonal data](https://docs.microsoft.com/en-us/azure/iot-dps/how-to-send-additional-data) can be used for custom provisioning using Azure Device Provisioning Services. The payload fields on this tab will only be visible if the Connection Type is set to "Device provisioning service". The data needs to be a valid JSON structure.
 
