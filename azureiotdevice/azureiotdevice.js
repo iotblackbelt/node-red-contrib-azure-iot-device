@@ -241,6 +241,11 @@ module.exports = function (RED) {
                 (node.authenticationmethod === "sas") ? new SecurityClient.sas(node.deviceid, saskey) :
                     new SecurityClient.x509(node.deviceid, options);
 
+            // Skip the provisioning step if the Connection Type == Connection string, since the device is already registered in IoT hub in that case.
+            if (node.connectiontype === "constr") {
+                resolve(options);
+            } else {
+            
             // Create provisioning client
             var provisioningClient = ProvisioningDeviceClient.create(GlobalProvisoningEndpoint, node.scopeid, new provisioningProtocol(), provisioningSecurityClient);
 
@@ -258,9 +263,7 @@ module.exports = function (RED) {
             
             // Register the device.
             node.log(node.deviceid + ' -> Provision IoT Device using DPS.');
-            if (node.connectiontype === "constr") {
-                resolve(options);
-            } else {
+            
                 provisioningClient.setProvisioningPayload(JSON.stringify(payload));
                 provisioningClient.register().then( function(result) {
                     // Process provisioning details
