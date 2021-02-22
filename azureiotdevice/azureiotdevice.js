@@ -226,58 +226,64 @@ module.exports = function (RED) {
                 }
             };
 
-            // Set provisioning protocol to selected (default to AMQP-WS)
-            var provisioningProtocol = (node.protocol === "amqp") ? ProvisioningProtocols.amqp : 
-                (node.protocol === "amqpWs") ? ProvisioningProtocols.amqpWs :
-                (node.protocol === "mqtt") ? ProvisioningProtocols.mqtt :
-                (node.protocol === "mqttWs") ? ProvisioningProtocols.mqttWs :
-                ProvisioningProtocols.amqpWs;
+            // Check if connection type is dps, if not skip the provisioning step
+            if (node.connectiontype === "dps") {
 
-            // Set security client based on SAS or X.509
-            var saskey = (node.enrollmenttype === "group") ? computeDerivedSymmetricKey(node.saskey, node.deviceid) : node.saskey;
-            var provisioningSecurityClient = 
-                (node.authenticationmethod === "sas") ? new SecurityClient.sas(node.deviceid, saskey) :
-                    new SecurityClient.x509(node.deviceid, options);
+                // Set provisioning protocol to selected (default to AMQP-WS)
+                var provisioningProtocol = (node.protocol === "amqp") ? ProvisioningProtocols.amqp : 
+                    (node.protocol === "amqpWs") ? ProvisioningProtocols.amqpWs :
+                    (node.protocol === "mqtt") ? ProvisioningProtocols.mqtt :
+                    (node.protocol === "mqttWs") ? ProvisioningProtocols.mqttWs :
+                    ProvisioningProtocols.amqpWs;
 
-            // Create provisioning client
-            var provisioningClient = ProvisioningDeviceClient.create(GlobalProvisoningEndpoint, node.scopeid, new provisioningProtocol(), provisioningSecurityClient);
+                // Set security client based on SAS or X.509
+                var saskey = (node.enrollmenttype === "group") ? computeDerivedSymmetricKey(node.saskey, node.deviceid) : node.saskey;
+                var provisioningSecurityClient = 
+                    (node.authenticationmethod === "sas") ? new SecurityClient.sas(node.deviceid, saskey) :
+                        new SecurityClient.x509(node.deviceid, options);
 
-            // set the provisioning payload (for custom allocation)
-            var payload = {};
-            if (node.DPSpayload) {
-                // Turn payload into JSON
-                try {
-                    payload = JSON.parse(node.DPSpayload);
-                    node.log(node.deviceid + ' -> DPS Payload added.');
-                } catch (err) {
-                    // do nothing 
+                // Create provisioning client
+                var provisioningClient = ProvisioningDeviceClient.create(GlobalProvisoningEndpoint, node.scopeid, new provisioningProtocol(), provisioningSecurityClient);
+
+                // set the provisioning payload (for custom allocation)
+                var payload = {};
+                if (node.DPSpayload) {
+                    // Turn payload into JSON
+                    try {
+                        payload = JSON.parse(node.DPSpayload);
+                        node.log(node.deviceid + ' -> DPS Payload added.');
+                    } catch (err) {
+                        // do nothing 
+                    }
                 }
-            }
-            
-            // Register the device.
-            node.log(node.deviceid + ' -> Provision IoT Device using DPS.');
-            if (node.connectiontype === "constr") {
-                resolve(options);
-            } else {
-                provisioningClient.setProvisioningPayload(JSON.stringify(payload));
-                provisioningClient.register().then( function(result) {
-                    // Process provisioning details
-                    node.log(node.deviceid + ' -> Registration succeeded.');
-                    node.log(node.deviceid + ' -> Assigned hub: ' + result.assignedHub);
-                    var msg = {};
-                    msg.topic = 'provisioning';
-                    msg.deviceId = result.deviceId;
-                    msg.payload = JSON.parse(JSON.stringify(result));
-                    node.send(msg);
-                    node.iothub = result.assignedHub;
-                    node.deviceid = result.deviceId;
-                    setStatus(node, statusEnum.disconnected);
+                
+                // Register the device.
+                node.log(node.deviceid + ' -> Provision IoT Device using DPS.');
+                if (node.connectiontype === "constr") {
                     resolve(options);
-                }).catch( function(err) {
-                    // Handle error
-                    setStatus(node, statusEnum.error);
-                    reject(err);
-                });
+                } else {
+                    provisioningClient.setProvisioningPayload(JSON.stringify(payload));
+                    provisioningClient.register().then( function(result) {
+                        // Process provisioning details
+                        node.log(node.deviceid + ' -> Registration succeeded.');
+                        node.log(node.deviceid + ' -> Assigned hub: ' + result.assignedHub);
+                        var msg = {};
+                        msg.topic = 'provisioning';
+                        msg.deviceId = result.deviceId;
+                        msg.payload = JSON.parse(JSON.stringify(result));
+                        node.send(msg);
+                        node.iothub = result.assignedHub;
+                        node.deviceid = result.deviceId;
+                        setStatus(node, statusEnum.disconnected);
+                        resolve(options);
+                    }).catch( function(err) {
+                        // Handle error
+                        setStatus(node, statusEnum.error);
+                        reject(err);
+                    });
+                }
+            } else {
+                resolve({});
             }
         });
     }
@@ -296,7 +302,8 @@ module.exports = function (RED) {
         // Set the client connection string and options
         var connectionString = 'HostName=' + node.iothub + ';DeviceId=' + node.deviceid;
         // Finalize the connection string
-        connectionString = connectionString + ((node.authenticationmethod === 'sas') ? (';SharedAccessKey=' + computeDerivedSymmetricKey(node.saskey, node.deviceid)) : ';x509=true');
+        var saskey = (node.connectiontype === "dps" && node.enrollmenttype === "group") ? computeDerivedSymmetricKey(node.saskey, node.deviceid) : node.saskey;
+        connectionString = connectionString + ((node.authenticationmethod === 'sas') ? (';SharedAccessKey=' + saskey) : ';x509=true');
         
         // Update options
         if (node.gatewayHostname !== "") {

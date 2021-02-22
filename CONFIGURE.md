@@ -30,7 +30,7 @@ You need to use the Device Identity tab to define the device identity and the wa
 The following table contains explanation of the fields and options on the **Device Indentity** tab. Some fileds will only be visible depending on selection choices made in other fields.
 | Field/option | Description | Depends on |
 | --- | --- | --- |
-| Device ID | This field will contain the device ID of the Azure IoT device as it is/will be on IoT Hub or IoT Central. | - |
+| Registration/Device ID | This field will contain the registration/device ID of the Azure IoT device as it is/will be on IoT Hub or IoT Central. When using Azure DPS and individual enrollmment, this field must contain the registraton ID in DPS.| - |
 | PnP Model ID | This field will contain the PnP Model ID for the Azure IoT device. The PnP Model ID will be used to setup the device as a [PnP Device](https://docs.microsoft.com/en-us/azure/iot-pnp/overview-iot-plug-and-play). What the reported properties or telemetry should look like when sending, can be found [here](https://docs.microsoft.com/en-us/azure/iot-pnp/concepts-convention). | - |
 | Connection Type | This option indicates whether the device will use a preset connection string or use [Device Provisioning Service](https://docs.microsoft.com/en-us/azure/iot-dps/). Depending on the option you select different fields will be shown to fill. | - |
 | Authentication Method | Azure IoT supports two authentication types, SAS token-based authentication and X.509 certificate authentication (individual and CA based). | - |
