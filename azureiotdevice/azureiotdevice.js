@@ -233,12 +233,19 @@ module.exports = function (RED) {
                 (node.protocol === "mqttWs") ? ProvisioningProtocols.mqttWs :
                 ProvisioningProtocols.amqpWs;
 
-            // Set security client based on SAS or X.509
+            // Set security key based on DPS group enrollment, vs. individual enrollment, or simple Connection Type = Connection String
             var saskey = (node.enrollmenttype === "group") ? computeDerivedSymmetricKey(node.saskey, node.deviceid) : node.saskey;
+
+            // Set security client based on SAS or X.509
             var provisioningSecurityClient = 
                 (node.authenticationmethod === "sas") ? new SecurityClient.sas(node.deviceid, saskey) :
                     new SecurityClient.x509(node.deviceid, options);
 
+            // Skip the provisioning step if the Connection Type == Connection string, since the device is already registered in IoT hub in that case.
+            if (node.connectiontype === "constr") {
+                resolve(options);
+            } else {
+            
             // Create provisioning client
             var provisioningClient = ProvisioningDeviceClient.create(GlobalProvisoningEndpoint, node.scopeid, new provisioningProtocol(), provisioningSecurityClient);
 
@@ -256,9 +263,7 @@ module.exports = function (RED) {
             
             // Register the device.
             node.log(node.deviceid + ' -> Provision IoT Device using DPS.');
-            if (node.connectiontype === "constr") {
-                resolve(options);
-            } else {
+            
                 provisioningClient.setProvisioningPayload(JSON.stringify(payload));
                 provisioningClient.register().then( function(result) {
                     // Process provisioning details
@@ -295,8 +300,13 @@ module.exports = function (RED) {
         Protocols.amqpWs;
         // Set the client connection string and options
         var connectionString = 'HostName=' + node.iothub + ';DeviceId=' + node.deviceid;
+
+        // Set security key based on DPS group enrollment, vs. individual enrollment, or simple Connection Type = Connection String
+        var saskey = (node.enrollmenttype === "group") ? computeDerivedSymmetricKey(node.saskey, node.deviceid) : node.saskey;
+
+        
         // Finalize the connection string
-        connectionString = connectionString + ((node.authenticationmethod === 'sas') ? (';SharedAccessKey=' + computeDerivedSymmetricKey(node.saskey, node.deviceid)) : ';x509=true');
+        connectionString = connectionString + ((node.authenticationmethod === 'sas') ? (';SharedAccessKey=' + saskey) : ';x509=true');
         
         // Update options
         if (node.gatewayHostname !== "") {
