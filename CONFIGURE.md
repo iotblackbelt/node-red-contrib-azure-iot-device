@@ -27,26 +27,26 @@ You need to use the Device Identity tab to define the device identity and the wa
 ![Device identity tab](images/device-identity-tab-00.png)
 
 ##### Fields and options
-The following table contains explanation of the fields and options on the **Device Indentity** tab. Some fileds will only be visible depending on selection choices made in other fields.
-| Field/option | Description | Depends on |
-| --- | --- | --- |
-| Registration/Device ID | This field will contain the registration/device ID of the Azure IoT device as it is/will be on IoT Hub or IoT Central. When using Azure DPS and individual enrollment, this field must contain the registraton ID in DPS.| - |
-| PnP Model ID | This field will contain the PnP Model ID for the Azure IoT device. The PnP Model ID will be used to setup the device as a [PnP Device](https://docs.microsoft.com/en-us/azure/iot-pnp/overview-iot-plug-and-play). What the reported properties or telemetry should look like when sending, can be found [here](https://docs.microsoft.com/en-us/azure/iot-pnp/concepts-convention). | - |
-| Connection Type | This option indicates whether the device will use a preset connection string or use [Device Provisioning Service](https://docs.microsoft.com/en-us/azure/iot-dps/). Depending on the option you select different fields will be shown to fill. | - |
-| Authentication Method | Azure IoT supports two authentication types, SAS token-based authentication and X.509 certificate authentication (individual and CA based). | - |
-| IoT Hub Hostname | The [Azure IoT Hub](https://docs.microsoft.com/en-us/azure/iot-hub/) Hostname '%iothubname%.azure-device.net'. The name can be found in the Azure portal on the overview page of the IoT Hub. | Connection Type |
-| IoT Central Device | Option to indicate whether the device is an [Azure IoT Central](https://docs.microsoft.com/en-us/azure/iot-central/) device.  | Connection Type |
-| Scope ID | The device provisioning Scope ID. This ID identifies the specific Azure Device Provisioning service to use. Azure IoT Central devices can only be provisioned using Device Provisioning. | Connection Type |
-| Enrollment type | Selection to indicate whether the device provisioning enrollment is an individual or a group enrollment. | Connection Type |
-| Authentication Method | Selection to indecate whther the attestation method used is shared access key (SAS) or certificate (X.509). | - |
-| SAS Key | The [symmetric key](https://docs.microsoft.com/en-us/azure/iot-dps/concepts-symmetric-key-attestation) to authenticate with the Device Provisioning Service (DPS) instance or Azure IOT Central. If the connection type is "connecting string", this is the SAS in the device properties. If the connection type is "dps", this is the SAS found in the enrollment properties. | Authentication Method |
-| X.509 Certificate | The [X.509](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-x509ca-overview) certifate, containing the full chain of the certificate tree for the IoT device. The certificate must be uploaded. | Authentication Method |
-| X.509 Key | The Azure IoT device X.509 key. The key must be uploaded. | Authentication Method |
-| Protocol | The Azure IoT platform supports three communication [protocols](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-devguide-protocols): HTTPS, MQTT and AMQP. AMQP and MQTT can also be used over websockets. For this node you can only select the MQTT and AMQP, because these protocols support direct communicaton between device and cloud. If you need to use the 443 port outbound from the device, you can use the websockets options. | - |
-| Retry interval | This interval determines the time-out the node will use to retry to connect, after the connection is lost. | - |
+The following table contains explanation of the fields and options on the **Device Indentity** tab. Some fileds will only be visible depending on selection choices made in other fields. You can override the configuration with environment variables described as follow.
+| Field/option | Description | Depends on | Environment Variable
+| --- | --- | --- | --- |
+| Registration/Device ID | This field will contain the registration/device ID of the Azure IoT device as it is/will be on IoT Hub or IoT Central. When using Azure DPS and individual enrollment, this field must contain the registraton ID in DPS.| - | AZ_IOT_DEVICE_DEVICEID |
+| PnP Model ID | This field will contain the PnP Model ID for the Azure IoT device. The PnP Model ID will be used to setup the device as a [PnP Device](https://docs.microsoft.com/en-us/azure/iot-pnp/overview-iot-plug-and-play). What the reported properties or telemetry should look like when sending, can be found [here](https://docs.microsoft.com/en-us/azure/iot-pnp/concepts-convention). | - | AZ_IOT_DEVICE_PNPMODELID |
+| Connection Type | This option indicates whether the device will use a preset connection string or use [Device Provisioning Service](https://docs.microsoft.com/en-us/azure/iot-dps/). Depending on the option you select different fields will be shown to fill. | - | AZ_IOT_DEVICE_CONNECTIONTYPE |
+| Authentication Method | Azure IoT supports two authentication types, SAS token-based authentication and X.509 certificate authentication (individual and CA based). | - | AZ_IOT_DEVICE_AUTHENTICATIONMETHOD |
+| IoT Hub Hostname | The [Azure IoT Hub](https://docs.microsoft.com/en-us/azure/iot-hub/) Hostname '%iothubname%.azure-device.net'. The name can be found in the Azure portal on the overview page of the IoT Hub. | Connection Type | AZ_IOT_DEVICE_IOTHUB |
+| IoT Central Device | Option to indicate whether the device is an [Azure IoT Central](https://docs.microsoft.com/en-us/azure/iot-central/) device.  | Connection Type | AZ_IOT_DEVICE_ISIOTCENTRAL |
+| Scope ID | The device provisioning Scope ID. This ID identifies the specific Azure Device Provisioning service to use. Azure IoT Central devices can only be provisioned using Device Provisioning. | Connection Type | AZ_IOT_DEVICE_SCOPEID |
+| Enrollment type | Selection to indicate whether the device provisioning enrollment is an individual or a group enrollment. | Connection Type | AZ_IOT_DEVICE_ENROLLMENTTYPE |
+| Authentication Method | Selection to indecate whther the attestation method used is shared access key (SAS) or certificate (X.509). | - | AZ_IOT_DEVICE_AUTHENTICATIONMETHOD |
+| SAS Key | The [symmetric key](https://docs.microsoft.com/en-us/azure/iot-dps/concepts-symmetric-key-attestation) to authenticate with the Device Provisioning Service (DPS) instance or Azure IOT Central. If the connection type is "connecting string", this is the SAS in the device properties. If the connection type is "dps", this is the SAS found in the enrollment properties. | Authentication Method | AZ_IOT_DEVICE_SASKEY |
+| X.509 Certificate | The [X.509](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-x509ca-overview) certifate, containing the full chain of the certificate tree for the IoT device. The certificate must be uploaded. | Authentication Method | AZ_IOT_DEVICE_CERT |
+| X.509 Key | The Azure IoT device X.509 key. The key must be uploaded. | Authentication Method | AZ_IOT_DEVICE_KEY
+| Protocol | The Azure IoT platform supports three communication [protocols](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-devguide-protocols): HTTPS, MQTT and AMQP. AMQP and MQTT can also be used over websockets. For this node you can only select the MQTT and AMQP, because these protocols support direct communicaton between device and cloud. If you need to use the 443 port outbound from the device, you can use the websockets options. | - | AZ_IOT_DEVICE_PROTOCOL |
+| Retry interval | This interval determines the time-out the node will use to retry to connect, after the connection is lost. | - | AZ_IOT_DEVICE_RETRYINTERVAL |
 
 ### Custom Provisioning
-The Custom Provisioning tab can be used to define additional payload data for Azure Device Provisioning Services. This [additonal data](https://docs.microsoft.com/en-us/azure/iot-dps/how-to-send-additional-data) can be used for custom provisioning using Azure Device Provisioning Services. The payload fields on this tab will only be visible if the Connection Type is set to "Device provisioning service". The data needs to be a valid JSON structure.
+The Custom Provisioning tab can be used to define additional payload data for Azure Device Provisioning Services. This [additonal data](https://docs.microsoft.com/en-us/azure/iot-dps/how-to-send-additional-data) can be used for custom provisioning using Azure Device Provisioning Services. The payload fields on this tab will only be visible if the Connection Type is set to "Device provisioning service". The data needs to be a valid JSON structure. You can override the additional data configuration with environment variable AZ_IOT_DEVICE_DPSPAYLOAD.
 
 ![Custom Provisioning tab](images/custom-provisioning-tab-00.png)
 
@@ -55,7 +55,7 @@ The [Direct Methods](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-devg
 
 ![Direct Methods tab](images/direct-methods-tab-00.png)
 
-Direct methods can be used from the cloud side to trigger an activity on the device, which requires a request-response pattern.
+Direct methods can be used from the cloud side to trigger an activity on the device, which requires a request-response pattern. You can override the configuration with environment variable AZ_IOT_DEVICE_METHODS.
 
 ##### Fields and options
 Direct Methods items can be added or deleted in this tab. Each item will require:
@@ -67,12 +67,12 @@ The **Iot Edge Gateway** tab enables you to setup your device as a downstream de
 ![Iot Edge Gateway tab](images/iot-edge-gateway-tab-00.png)
 
 ##### Fields
-The following table contains explanation of the fields and options on the **IoT Edge Gateway** tab.
+The following table contains explanation of the fields and options on the **IoT Edge Gateway** tab.  You can override the configuration with environment variables described as follow.
 
-| Field | Description |
-| --- | --- |
-| Hostname | This field will contain the IoT Edge hostname. The hostname identifies a specific IoT Edge. |
-| X.509 Gateway CA Certificate | The IoT Edge X.509 CA certificate. This certificate will be used to enable encrypted and trusted communication between the device and the IoT Edge. The certificate must be uploaded. |
+| Field | Description | Environment Variable
+| --- | --- | --- |
+| Hostname | This field will contain the IoT Edge hostname. The hostname identifies a specific IoT Edge. | AZ_IOT_DEVICE_GATEWAYHOSTNAME |
+| X.509 Gateway CA Certificate | The IoT Edge X.509 CA certificate. This certificate will be used to enable encrypted and trusted communication between the device and the IoT Edge. The certificate must be uploaded. | AZ_IOT_DEVICE_CA |
 
 ## Finalize
 Once you've configured the device, you need to deploy the node in Node-RED. If the setup was correct, the device will connect to the Azure IoT platform. In the debug window you can see whether the configuration was correct and the device was able to provision and connect to the Azure IoT platform. How to use the node can be found [here](./USE.md).

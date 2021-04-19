@@ -38,6 +38,31 @@ var pki = forge.pki;
 var client = null;
 var twin = null;
 
+class Configuration {
+    constructor(configs) {
+      this.configs = configs;
+    }
+
+    getConfig(name) {
+        let envName = "AZ_IOT_DEVICE_" + name.toUpperCase();
+        if (envName in process.env) {
+            let type = typeof this.configs[name];
+            let value = process.env[envName];
+            if (type == "boolean") {
+                return value.toLowerCase() === "true";
+            } 
+            if (type == "number") {
+                return Number(value);
+            }
+            if (type == "object") {
+                return JSON.parse(value)
+            }
+            return value;
+        }
+        return this.configs[name];
+    }
+}
+
 /**
  * The "azure-iot-device" node enables you to represent an Azure IoT Device in Node-Red.
  * The node provide connecting a device using connection string and DPS
@@ -47,8 +72,6 @@ var twin = null;
  * You can connect to IoT Edge as a downstream device, IoT Hub and IoT Central.
  */
 module.exports = function (RED) {
-
-    const { config } = require('process');
 
     var statusEnum = {
         connected: { fill: "green", shape:"dot", text: "Connected" },
@@ -65,23 +88,25 @@ module.exports = function (RED) {
     function AzureIoTDevice(config) {
         // Store node for further use
         var node = this;
-        node.deviceid = config.deviceid;
-        node.pnpModelid = config.pnpModelid;
-        node.connectiontype = config.connectiontype;
-        node.authenticationmethod = config.authenticationmethod;
-        node.enrollmenttype = config.enrollmenttype;
-        node.iothub = config.iothub;
-        node.isIotcentral = config.isIotcentral;
-        node.scopeid = config.scopeid;
-        node.saskey = config.saskey;
-        node.protocol = config.protocol;
-        node.retryInterval = config.retryInterval;
-        node.methods = config.methods;
-        node.DPSpayload = config.DPSpayload;
-        node.gatewayHostname = config.gatewayHostname;
-        node.cert = config.cert;
-        node.key = config.key;
-        node.ca = config.ca;
+
+        let configuration = new Configuration(config);
+        node.deviceid = configuration.getConfig('deviceid');
+        node.pnpModelid = configuration.getConfig('pnpModelid');
+        node.connectiontype = configuration.getConfig('connectiontype');
+        node.authenticationmethod = configuration.getConfig('authenticationmethod');
+        node.enrollmenttype = configuration.getConfig('enrollmenttype');
+        node.iothub = configuration.getConfig('iothub');
+        node.isIotcentral = configuration.getConfig('isIotcentral');
+        node.scopeid = configuration.getConfig('scopeid');
+        node.saskey = configuration.getConfig('saskey');
+        node.protocol = configuration.getConfig('protocol');
+        node.retryInterval = configuration.getConfig('retryInterval');
+        node.methods = configuration.getConfig('methods');
+        node.DPSpayload = configuration.getConfig('DPSpayload');
+        node.gatewayHostname = configuration.getConfig('gatewayHostname');
+        node.cert = configuration.getConfig('cert');
+        node.key = configuration.getConfig('key');
+        node.ca = configuration.getConfig('ca');
 
         // Create the Node-RED node
         RED.nodes.createNode(node, config);
@@ -318,7 +343,7 @@ module.exports = function (RED) {
         }
 
         // Define the client
-        node.log(node.deviceid + ' -> Connection string: ' + connectionString);
+        node.log(node.deviceid + ' -> Connection string: ' + (node.authenticationmethod === 'sas') ? connectionString.replace(saskey, "***") : "");
         client = Client.fromConnectionString(connectionString, deviceProtocol);
 
         // Add pnp modelid to options
