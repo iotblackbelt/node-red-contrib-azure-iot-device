@@ -16,3 +16,8 @@
     - Documentation: 
         - CONFIGURE.md added: "Currently only CA based X.509 (group) certificates are supported. Individual device certificates are not. Both individual and group SAS Keys are supported."
         - USE.md added: description of "Azure IoT Central and PnP require a specific reported property"
+
+## Release 0.2.5:
+- Bug fixes:
+    - [#27](https://github.com/iotblackbelt/node-red-contrib-azure-iot-device/issues/27): Incorrect azure-iot-device-amqp version in 0.2.4?
+        - Wrong version in package.json, has been fixed
