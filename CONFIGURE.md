@@ -9,6 +9,7 @@ The Azure IoT Device Node-RED node can be configured as an Azure IoT Device usin
 >    * Using the Azure Portal, Azure CLI, Visual Studio Code, Powershell or the Azure IoT Services SDK.
 >* Automated provisioning using [Azure IoT Device Provisioning Services](https://docs.microsoft.com/en-us/azure/iot-dps/).
 >* [Device Authentication using X.509 CA Certificates](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-x509ca-overview).
+>* [Tutorial: Using Microsoft-supplied scripts to create test certificates](https://docs.microsoft.com/en-us/azure/iot-hub/tutorial-x509-scripts)
 
 The Azure IoT Device node can either use a symmetric key or a X.509 certificate as the attestation mechanism. More information on using symmetric key or X.509 certificates can be found in the Azure IoT Hub and Device Provisioning Services documentation online.
 
@@ -38,12 +39,13 @@ The following table contains explanation of the fields and options on the **Devi
 | IoT Central Device | Option to indicate whether the device is an [Azure IoT Central](https://docs.microsoft.com/en-us/azure/iot-central/) device.  | Connection Type |
 | Scope ID | The device provisioning Scope ID. This ID identifies the specific Azure Device Provisioning service to use. Azure IoT Central devices can only be provisioned using Device Provisioning. | Connection Type |
 | Enrollment type | Selection to indicate whether the device provisioning enrollment is an individual or a group enrollment. | Connection Type |
-| Authentication Method | Selection to indecate whther the attestation method used is shared access key (SAS) or certificate (X.509). | - |
+| Authentication Method | Selection to indicate whether the attestation method used is shared access key (SAS) or certificate (X.509). | - |
 | SAS Key | The [symmetric key](https://docs.microsoft.com/en-us/azure/iot-dps/concepts-symmetric-key-attestation) to authenticate with the Device Provisioning Service (DPS) instance or Azure IOT Central. If the connection type is "connecting string", this is the SAS in the device properties. If the connection type is "dps", this is the SAS found in the enrollment properties. | Authentication Method |
 | X.509 Certificate | The [X.509](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-x509ca-overview) certifate, containing the full chain of the certificate tree for the IoT device. The certificate must be uploaded. | Authentication Method |
 | X.509 Key | The Azure IoT device X.509 key. The key must be uploaded. | Authentication Method |
 | Protocol | The Azure IoT platform supports three communication [protocols](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-devguide-protocols): HTTPS, MQTT and AMQP. AMQP and MQTT can also be used over websockets. For this node you can only select the MQTT and AMQP, because these protocols support direct communicaton between device and cloud. If you need to use the 443 port outbound from the device, you can use the websockets options. | - |
-| Retry interval | This interval determines the time-out the node will use to retry to connect, after the connection is lost. | - |
+
+> NB: Currently only CA based X.509 certificates (self-signed or from a certificate authority) are supported. Individual device certificates are not. Both individual and group SAS Keys are supported.
 
 ### Custom Provisioning
 The Custom Provisioning tab can be used to define additional payload data for Azure Device Provisioning Services. This [additonal data](https://docs.microsoft.com/en-us/azure/iot-dps/how-to-send-additional-data) can be used for custom provisioning using Azure Device Provisioning Services. The payload fields on this tab will only be visible if the Connection Type is set to "Device provisioning service". The data needs to be a valid JSON structure.

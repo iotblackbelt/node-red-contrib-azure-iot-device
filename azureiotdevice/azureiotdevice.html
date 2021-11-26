@@ -14,8 +14,9 @@
             saskey: {value: "", required:false},
             certname: {value:""},
             keyname: {value:""},
+            passphrase: {value:""},
             protocol: {value: "", required:true},
-            retryInterval: {value: 30, required:true, validate: RED.validators.number()},
+            retryInterval: {value: 10, required:true, validate: RED.validators.number()},
             methods: {value: []},
             DPSpayload: {value:""},
             gatewayHostname: {value:"", required: false},
@@ -49,6 +50,16 @@
                 }
                 reader.readAsText(file,'utf-8');
             }
+
+            $(".node-input-retryInterval").spinner({
+                max:60,
+                min:1
+            });
+
+            $(".node-input-retryNumber").spinner({
+                max:60,
+                min:1
+            });
 
             // Add DPS payload editor
             this.editor = RED.editor.createEditor({
@@ -125,6 +136,7 @@
             $(".dps-row").hide();
             $(".sas-row").hide();
             $(".x509-row").hide();
+            $("proxy-ros").hide();
 
             $("#node-input-connectiontype").change(function() {
                 if ($(this).val() === "constr") {
@@ -140,9 +152,26 @@
                 if ($(this).val() === "sas") {
                     $(".sas-row").show();
                     $(".x509-row").hide();
+                    $("#node-input-enrollmenttype").empty();
+                    $('#node-input-enrollmenttype').append($('<option>',
+                        {
+                            value: "group",
+                            text: 'Group'
+                        }));
+                    $('#node-input-enrollmenttype').append($('<option>',
+                    {
+                        value: "device",
+                        text: 'Individual'
+                    }));
                 } else if ($(this).val() === "x509") {
                     $(".sas-row").hide();
                     $(".x509-row").show();
+                    $("#node-input-enrollmenttype").empty();
+                    $('#node-input-enrollmenttype').append($('<option>',
+                        {
+                            value: "group",
+                            text: 'Group'
+                        }));
                 }
             });
 
@@ -324,18 +353,16 @@
                 <label for="node-input-scopeid"><i class="icon-tag"></i> <span>Scope ID</span></label>
                 <input type="text" id="node-input-scopeid" placeholder="%scopeId%">
             </div>
-            <div class="form-row dps-row">
-                <label for="node-input-enrollmenttype"><i class="icon-tag"></i> <span>Enrollment type</span></label>
-                <select id="node-input-enrollmenttype">
-                    <option value="group">Group</option>
-                    <option value="device">Individual</option>
-                </select>
-            </div>
             <div class="form-row">
                 <label for="node-input-authenticationmethod"><i class="icon-tag"></i> <span>Authentication Method</span></label>
                 <select id="node-input-authenticationmethod">
                     <option value="sas">Shared access signature (SAS)</option>
-                    <option value="x509">Certificates (X.509)</option>
+                    <option value="x509">CA Certificates (X.509)</option>
+                </select>
+            </div>
+            <div class="form-row dps-row">
+                <label for="node-input-enrollmenttype"><i class="icon-tag"></i> <span>Enrollment type</span></label>
+                <select id="node-input-enrollmenttype">
                 </select>
             </div>
             <div class="form-row sas-row">
@@ -364,6 +391,10 @@
                 <input type="hidden" id="node-input-keyname">
                 <input type="hidden" id="node-input-key">
             </div>
+            <div class="form-row x509-row">
+                <label for="node-input-passphrase"><i class="icon-tag"></i> <span>Passphrase (optional)</span></label>
+                <input type="password" id="node-input-passphrase" placeholder="%provide passphrase if needed%">
+            </div>
             <div class="form-row">
                 <label for="node-input-protocol"><i class="icon-tag"></i> <span>Protocol</span></label>
                 <select id="node-input-protocol">
@@ -372,10 +403,6 @@
                     <option value="mqtt">MQTT</option>
                     <option value="mqttWs">MQTT_WS</option>
                 </select>
-            </div>
-            <div class="form-row">
-                <label for="node-input-retryInterval"><i class="icon-tag"></i> <span>Retry interval</span></label>
-                <input type="integer" width=50 id="node-input-retryInterval" placeholder="%connection retry interval%">
             </div>
         </div>
         <div id="compact-device-tab-customDPS" style="display:none">

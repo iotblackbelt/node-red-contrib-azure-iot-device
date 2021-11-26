@@ -58,6 +58,8 @@ When you update the desired properties on a device twin in Azure, the node will 
 
 You can use this message to do additional processing on the device.
 
+> Azure IoT Central and PnP expect a response on a desired property change. See [Input reported properties](./USE.md#input-reported-properties) for the message structure.
+
 ### Output command message
 When you send a direct method to the device from Azure, the node will send a node message to the output containing the command and its parameters:
 
@@ -109,16 +111,15 @@ Sending telemetry, including (optional) properties, requires you to create a con
 {
     'topic': 'telemetry',
     'payload': { 
-        '<name>': '<value>',
+        '<name>': <value>,
         ...
     },
     'properties': [                                           
-       {'key' :'<key>', 'value' : '<value>'},
+       {'key':'<key>','value':<value>},
        ...
     ]
 }
 ```
-
 
 ### Input reported properties
 Sending reported properties requires you to create a connection to the node input and send a node message in the following format:
@@ -129,6 +130,36 @@ Sending reported properties requires you to create a connection to the node inpu
     'payload': { 
         '<name>': <value>,
         ...
+    }
+}
+```
+
+#### Azure IoT Central and PnP require a specific reported property format to be send.
+
+The format for a root level desired property change reponse is:
+```
+{
+    'topic': 'property',
+    'payload': { 
+        '<property_name>': {
+            'value': <value>,
+            'ac': <status_code>,
+            'ad': '<message>',
+            'av': <version>
+        }
+    }
+}
+```
+
+The format for a component level desired property change reponse is:
+```
+{
+    'topic': 'property',
+    'payload': { 
+        '<component_name>': {
+            '<property_name>': <value>,
+            '__t': 'c'
+        }
     }
 }
 ```

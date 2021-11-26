@@ -1,7 +1,7 @@
 {
   "name": "node-red-contrib-azure-iot-device",
   "description": "Node-RED node to connect to the Azure IoT platform as a device.",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/iotblackbelt/node-red-contrib-azure-iot-device.git"
@@ -14,15 +14,15 @@
     "node": ">=0.10.0"
   },
   "dependencies": {
-    "azure-iot-device": "^1.17.3",
-    "azure-iot-device-amqp": "^1.13.3",
-    "azure-iot-device-mqtt": "^1.15.3",
-    "azure-iot-provisioning-device": "^1.8.7",
-    "azure-iot-provisioning-device-mqtt": "^1.7.7",
-    "azure-iot-provisioning-device-amqp": "^1.8.7",
-    "azure-iot-security-x509": "^1.7.7",
-    "azure-iot-security-symmetric-key": "^1.7.7",
-    "rhea": "^1.0.24",
+    "azure-iot-device": "^1.15.4",
+    "azure-iot-device-amqp": "^1.15.4",
+    "azure-iot-device-mqtt": "^1.15.8",
+    "azure-iot-provisioning-device": "^1.8.12",
+    "azure-iot-provisioning-device-mqtt": "^1.7.12",
+    "azure-iot-provisioning-device-amqp": "^1.8.12",
+    "azure-iot-security-x509": "^1.7.12",
+    "azure-iot-security-symmetric-key": "^1.7.12",
+    "rhea": "^2.0.6",
     "node-forge": "^0.10.0"
   },
   "keywords": [
