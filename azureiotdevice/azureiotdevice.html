@@ -23,7 +23,9 @@
             caname: {value:""},
             cert: {type:"text", value: "", required:false},
             key: {type:"text", value: "", required:false},
-            ca: {type:"text", value:"", required: false}
+            ca: {type:"text", value:"", required: false},
+            proxy: {type:"http proxy",required: false,
+                    label:"Proxy Configuration" }
         },
         inputs:1,
         outputs:1,
@@ -175,6 +177,25 @@
                 }
             });
 
+            // Proxies
+            function updateProxyOptions() {
+                if ($("#node-input-useProxy").is(":checked")) {
+                    $("#node-input-useProxy-row").show();
+                } else {
+                    $("#node-input-useProxy-row").hide();
+                }
+                RED.tray.resize();
+            }
+            if (node.proxy) {
+                $("#node-input-useProxy").prop("checked", true);
+            } else {
+                $("#node-input-useProxy").prop("checked", false);
+            }
+            updateProxyOptions();
+            $("#node-input-useProxy").on("click", function() {
+                updateProxyOptions();
+            });
+
             // Direct methods
             let methodsItemCount = 0;
             if (node.methods && node.methods.length > 0) {
@@ -309,6 +330,9 @@
 
             // Save the DPS custom payload
             $("#node-input-DPSpayload").val(this.editor.getValue());
+            if (!$("#node-input-useProxy").is(":checked")) {
+                $("#node-input-proxy").val("_ADD_");
+            }
             this.editor.destroy();
             delete this.editor;
         },
@@ -403,6 +427,13 @@
                     <option value="mqtt">MQTT</option>
                     <option value="mqttWs">MQTT_WS</option>
                 </select>
+            </div>
+            <div class="form-row">
+                <input type="checkbox" id="node-input-useProxy" style="display: inline-block; width: auto; vertical-align: top;">
+                <label for="node-input-useProxy" style="width: auto;"><span>Use Proxy</span></label>
+                <div id="node-input-useProxy-row" class="hide">
+                    <label style="width: auto; margin-left: 20px; margin-right: 10px;" for="node-input-proxy"><i class="fa fa-globe"></i> <span>Proxy Configuration</span></label><input type="text" style="width: 270px" id="node-input-proxy">
+                </div>
             </div>
         </div>
         <div id="compact-device-tab-customDPS" style="display:none">
