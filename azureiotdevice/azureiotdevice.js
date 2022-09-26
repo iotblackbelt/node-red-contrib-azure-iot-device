@@ -14,6 +14,7 @@ module.exports = function (RED) {
     'use strict'
     const Client = require('azure-iot-device').Client;
     const Message = require('azure-iot-device').Message;
+    const { HttpsProxyAgent } = require('hpagent');
 
     // Only AMQP(WS) or MQTT(WS) used as protocol, no HTTP support
     const Protocols = {
@@ -85,7 +86,8 @@ module.exports = function (RED) {
         node.client = null;
         //** @type {device.Twin} */ this.twin;
         node.twin = null;
-
+        // Proxy config
+        node.proxy = config.proxy;
         setStatus(node, statusEnum.disconnected);
         
         // Initiate
@@ -233,6 +235,71 @@ module.exports = function (RED) {
                         reject("Invalid certificates.");
                     }
                 };
+
+                // Proxy Configuration
+                var prox, noprox;
+                if (process.env.http_proxy) { prox = process.env.http_proxy; }
+                if (process.env.HTTP_PROXY) { prox = process.env.HTTP_PROXY; }
+                if (process.env.no_proxy) { noprox = process.env.no_proxy.split(","); }
+                if (process.env.NO_PROXY) { noprox = process.env.NO_PROXY.split(","); }
+
+                var proxyConfig = null;
+                if (node.proxy) {
+                    proxyConfig = RED.nodes.getNode(node.proxy);
+                    prox = proxyConfig.url;
+                    noprox = proxyConfig.nopoxy;
+                }
+
+                var noproxy;
+                if (noprox) {
+                    for (var i = 0; i < noprox.length; i += 1) {
+                        if (url.indexOf(noprox[i]) !== -1) { noproxy=true; }
+                    }
+                }
+                if (prox && !noproxy) {
+                    var match = prox.match(/^(https?:\/\/)?(.+)?:([0-9]+)?/i);
+                    if (match) {
+                        let proxyURL = new URL(prox);
+                        //set username/password to null to stop empty creds header
+                        let proxyOptions = {
+                            proxy: {
+                                protocol: proxyURL.protocol,
+                                hostname: proxyURL.hostname,
+                                port: proxyURL.port,
+                                username: null,
+                                password: null
+                            },
+                            maxFreeSockets: 256,
+                            maxSockets: 256,
+                            keepAlive: true
+                        }
+                        if (proxyConfig && proxyConfig.credentials) {
+                            let proxyUsername = proxyConfig.credentials.username || '';
+                            let proxyPassword = proxyConfig.credentials.password || '';
+                            if (proxyUsername || proxyPassword) {
+                                proxyOptions.proxy.username = proxyUsername;
+                                proxyOptions.proxy.password = proxyPassword;
+                            }
+                        } else if (proxyURL.username || proxyURL.password){
+                            proxyOptions.proxy.username = proxyURL.username;
+                            proxyOptions.proxy.password = proxyURL.password;
+                        }
+                        
+                        if (node.protocol === "amqpWs") {
+                            options.amqp = {
+                                webSocketAgent: new HttpsProxyAgent(proxyOptions)
+                            }
+                        } else if (node.protocol === "mqttWs") {
+                            node.log("Preparing mqqt proxy config");
+                            options.mqtt = {
+                                webSocketAgent: new HttpsProxyAgent(proxyOptions)
+                            }
+                        }
+
+                    } else {
+                        node.warn("Bad proxy url: "+ prox);
+                    }
+                }
 
                 // Check if connection type is dps, if not skip the provisioning step
                 if (node.connectiontype === "dps") {
