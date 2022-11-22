@@ -1,5 +1,9 @@
 # Release notes
 
+## elease 0.2.7:
+- Updates:
+    - Telemetry messages are now sored in a (memory-backed) store-forward buffer.
+
 ## Release 0.2.6:
 - Updates:
     - Updated to latest version of Azure IOT SDK (1.9.0 for device)
